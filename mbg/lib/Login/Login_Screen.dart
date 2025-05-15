@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'Beranda.dart'; // Pastikan untuk mengimpor HomeScreen
-import 'Lupa_Password.dart';
+import 'package:provider/provider.dart';
+import '../provider/user_provider.dart';
+import '../screens/main_screen.dart';
+import 'lupa_password.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -9,6 +11,17 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
+
+    // Contoh role yang bisa dipilih setelah login berhasil (hardcoded untuk simulasi)
+    final List<String> roles = [
+      'Admin Sekolah',
+      'Guru',
+      'Orang Tua',
+      'Dinas Pendidikan',
+      'Tim Katering',
+    ];
+
+    String? selectedRole;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -41,6 +54,22 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Pilih Role',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: roles
+                      .map((role) => DropdownMenuItem(
+                            value: role,
+                            child: Text(role),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    selectedRole = value;
+                  },
+                ),
+                const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -60,11 +89,25 @@ class LoginScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Langsung masuk ke HomeScreen tanpa validasi
+                      if (selectedRole == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Pilih role terlebih dahulu!'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Set role di provider
+                      Provider.of<UserProvider>(context, listen: false)
+                          .setRole(selectedRole!);
+
+                      // Navigasi ke main screen (dashboard)
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const HomeScreen(),
+                          builder: (context) => const MainScreen(),
                         ),
                       );
                     },

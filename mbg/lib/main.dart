@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
-import 'Login/Login_Screen.dart'; // Sesuaikan dengan struktur folder
+import 'package:provider/provider.dart';
+import 'provider/user_provider.dart';
+import 'theme/app_theme.dart';
+import 'Login/login_screen.dart'; // Ganti dengan nama file login kamu
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -11,10 +21,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Makan Bergizi',
+      title: 'Makan Gizi Gratis',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.green),
-      home: const LoginScreen(), // pastikan LoginScreen adalah nama class-nya
+      theme: appTheme,
+      home: const LoginScreen(),
     );
   }
 }
