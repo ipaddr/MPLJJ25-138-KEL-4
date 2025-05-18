@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'evaluasi_nilai_page.dart';
+import 'penilaian_pemahaman_page.dart';
+import 'rekap_mingguan_page.dart';
 
 class GuruDashboard extends StatelessWidget {
   const GuruDashboard({super.key});
@@ -10,7 +13,6 @@ class GuruDashboard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Profile Row
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -21,7 +23,7 @@ class GuruDashboard extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 28,
-                  backgroundImage: AssetImage('assets/images/guru_profile.jpg'), // Ganti sesuai path gambar
+                  backgroundImage: AssetImage('assets/images/guru_profile.jpg'),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -51,10 +53,7 @@ class GuruDashboard extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Robot Icon
           Center(
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -62,21 +61,19 @@ class GuruDashboard extends StatelessWidget {
                 color: Colors.blue.shade100,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(Icons.smart_toy, size: 32, color: Colors.blue),
+              child: const Icon(Icons.smart_toy, size: 32, color: Colors.blue),
             ),
           ),
-
           const SizedBox(height: 24),
           const Text("Menu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-
-          // Menu cards
           _buildMenuItem(
             context,
             title: "Evaluasi Nilai Akademik",
             subtitle: "Tinjau dan perbarui nilai siswa",
             icon: Icons.school,
             iconColor: Colors.blue,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EvaluasiNilaiPage())),
           ),
           _buildMenuItem(
             context,
@@ -84,6 +81,7 @@ class GuruDashboard extends StatelessWidget {
             subtitle: "Lacak pemahaman siswa",
             icon: Icons.menu_book,
             iconColor: Colors.green,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PenilaianPemahamanPage())),
           ),
           _buildMenuItem(
             context,
@@ -91,6 +89,7 @@ class GuruDashboard extends StatelessWidget {
             subtitle: "Melihat ringkasan kinerja kelas",
             icon: Icons.show_chart,
             iconColor: Colors.purple,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RekapMingguanPage())),
           ),
         ],
       ),
@@ -103,6 +102,7 @@ class GuruDashboard extends StatelessWidget {
     required String subtitle,
     required IconData icon,
     required Color iconColor,
+    required VoidCallback onTap,
   }) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -115,9 +115,7 @@ class GuruDashboard extends StatelessWidget {
           backgroundColor: iconColor.withOpacity(0.1),
           child: Icon(icon, color: iconColor),
         ),
-        onTap: () {
-          // TODO: navigasi ke halaman terkait
-        },
+        onTap: onTap,
       ),
     );
   }

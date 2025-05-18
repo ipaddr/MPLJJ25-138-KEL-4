@@ -30,12 +30,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Tambahkan ini untuk Provider
   provider: ^6.1.1
-
-  # Tambahkan ikon iOS (opsional)
   cupertino_icons: ^1.0.8
+  fl_chart: ^0.64.0
+  pdf: ^3.10.4
+  printing: ^5.11.0
 
 dev_dependencies:
   flutter_test:
