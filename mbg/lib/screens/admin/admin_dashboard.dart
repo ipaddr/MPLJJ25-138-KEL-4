@@ -15,7 +15,7 @@ class AdminDashboard extends StatelessWidget {
             children: [
               const CircleAvatar(
                 radius: 30,
-                backgroundImage: AssetImage('assets/images/profile.jpg'), // Ganti path sesuai gambar
+                backgroundImage: AssetImage('assets/images/foto.png'),
               ),
               const SizedBox(width: 12),
               Column(
