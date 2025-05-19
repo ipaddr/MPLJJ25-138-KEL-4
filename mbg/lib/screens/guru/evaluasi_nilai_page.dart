@@ -14,8 +14,19 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
     {"nama": "James Bone", "sebelum": 78, "sesudah": 82},
   ];
 
-  int get avgSebelum => siswa.map((s) => s['sebelum'] as int).reduce((a, b) => a + b) ~/ siswa.length;
-  int get avgSesudah => siswa.map((s) => s['sesudah'] as int).reduce((a, b) => a + b) ~/ siswa.length;
+  double get safeAvgSebelum {
+    final valid = siswa.where((s) => s['sebelum'] != null).toList();
+    if (valid.isEmpty) return 0.1; // Minimal supaya chart nggak error
+    final total = valid.map((s) => s['sebelum'] as int).fold(0, (a, b) => a + b);
+    return total / valid.length;
+  }
+
+  double get safeAvgSesudah {
+    final valid = siswa.where((s) => s['sesudah'] != null).toList();
+    if (valid.isEmpty) return 0.1;
+    final total = valid.map((s) => s['sesudah'] as int).fold(0, (a, b) => a + b);
+    return total / valid.length;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +56,8 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
                       child: TextFormField(
                         initialValue: siswa[i]['sebelum'].toString(),
                         keyboardType: TextInputType.number,
-                        onChanged: (val) => setState(() => siswa[i]['sebelum'] = int.tryParse(val) ?? 0),
+                        onChanged: (val) =>
+                            setState(() => siswa[i]['sebelum'] = int.tryParse(val) ?? 0),
                       ),
                     ),
                     Padding(
@@ -53,7 +65,8 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
                       child: TextFormField(
                         initialValue: siswa[i]['sesudah'].toString(),
                         keyboardType: TextInputType.number,
-                        onChanged: (val) => setState(() => siswa[i]['sesudah'] = int.tryParse(val) ?? 0),
+                        onChanged: (val) =>
+                            setState(() => siswa[i]['sesudah'] = int.tryParse(val) ?? 0),
                       ),
                     ),
                     Center(
@@ -68,28 +81,70 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
             const SizedBox(height: 12),
             const Text("Rata-Rata Nilai", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            BarChart(
-              BarChartData(
-                barGroups: [
-                  BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: avgSebelum.toDouble(), color: Colors.blue)]),
-                  BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: avgSesudah.toDouble(), color: Colors.blueAccent)]),
-                ],
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, getTitlesWidget: (value, _) {
-                      return Text(value == 0 ? "Sebelum MBG" : "Sesudah MBG");
-                    }),
+            if (siswa.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  "Data kosong, menampilkan grafik dummy.",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            AspectRatio(
+              aspectRatio: 1.5,
+              child: BarChart(
+                BarChartData(
+                  barGroups: siswa.isEmpty
+                      ? [
+                          BarChartGroupData(
+                            x: 0,
+                            barRods: [BarChartRodData(toY: 0.1, color: Colors.grey)],
+                          ),
+                          BarChartGroupData(
+                            x: 1,
+                            barRods: [BarChartRodData(toY: 0.1, color: Colors.grey)],
+                          ),
+                        ]
+                      : [
+                          BarChartGroupData(
+                            x: 0,
+                            barRods: [BarChartRodData(toY: safeAvgSebelum, color: Colors.blue)],
+                          ),
+                          BarChartGroupData(
+                            x: 1,
+                            barRods: [BarChartRodData(toY: safeAvgSesudah, color: Colors.blueAccent)],
+                          ),
+                        ],
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, _) {
+                          return Text(value == 0 ? "Sebelum MBG" : "Sesudah MBG");
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-            const Spacer(),
-            Center(
-              child: ElevatedButton(
-                child: const Text("Kembali"),
-                onPressed: () => Navigator.pop(context),
-              ),
-            )
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  child: const Text("Kosongkan Data"),
+                  onPressed: () {
+                    setState(() {
+                      siswa.clear();
+                    });
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text("Kembali"),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
           ],
         ),
       ),
