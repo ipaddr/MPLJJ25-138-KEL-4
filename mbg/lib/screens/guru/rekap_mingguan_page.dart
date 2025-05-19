@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:printing/printing.dart';
-import 'package:pdf/widgets.dart' as pw;
 
 class RekapMingguanPage extends StatelessWidget {
   const RekapMingguanPage({super.key});
@@ -26,15 +24,21 @@ class RekapMingguanPage extends StatelessWidget {
                 BarChartData(
                   barGroups: List.generate(7, (index) => BarChartGroupData(
                     x: index,
-                    barRods: [BarChartRodData(toY: nilaiHarian[index], color: Colors.blue[(index + 1) * 100]!)])),
+                    barRods: [BarChartRodData(
+                      toY: nilaiHarian[index],
+                      color: Colors.blue[(index + 1) * 100] ?? Colors.blue,
+                    )])),
                   titlesData: FlTitlesData(
                     bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true, getTitlesWidget: (value, _) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(hari[value.toInt()]),
-                        );
-                      }),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, _) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(hari[value.toInt()]),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -49,16 +53,20 @@ class RekapMingguanPage extends StatelessWidget {
                   child: const Text("Kembali"),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () async {
-                    final doc = pw.Document();
-                    doc.addPage(
-                      pw.Page(
-                        build: (pw.Context context) => pw.Center(
-                          child: pw.Text("Export Data Rekap Nilai Mingguan"),
-                        ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Fitur Tidak Tersedia"),
+                        content: const Text("Export PDF dinonaktifkan untuk menjaga performa perangkat."),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("OK"),
+                          )
+                        ],
                       ),
                     );
-                    await Printing.sharePdf(bytes: await doc.save(), filename: 'rekap_mingguan.pdf');
                   },
                   icon: const Icon(Icons.picture_as_pdf),
                   label: const Text("Export PDF"),
