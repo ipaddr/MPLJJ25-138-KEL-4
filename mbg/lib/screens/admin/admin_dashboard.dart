@@ -1,4 +1,6 @@
+// admin_dashboard.dart
 import 'package:flutter/material.dart';
+import 'admin_dashboard_routes.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -79,9 +81,9 @@ class AdminDashboard extends StatelessWidget {
           // Menu
           const Text("Menu", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
-          _buildMenuItem(Icons.school, "Input Data Siswa", "Kelola informasi siswa", Colors.blue.shade100),
-          _buildMenuItem(Icons.rice_bowl, "Distribusi Makanan", "Lacak distribusi harian", Colors.green.shade100),
-          _buildMenuItem(Icons.bar_chart, "Laporan Konsumsi", "Lihat statistik harian", Colors.purple.shade100),
+          _buildMenuItem(context, Icons.school, "Input Data Siswa", "Kelola informasi siswa", Colors.blue.shade100, const InputDataSiswaPage()),
+          _buildMenuItem(context, Icons.rice_bowl, "Distribusi Makanan", "Lacak distribusi harian", Colors.green.shade100, const DistribusiMakananPage()),
+          _buildMenuItem(context, Icons.bar_chart, "Laporan Konsumsi", "Lihat statistik harian", Colors.purple.shade100, const LaporanKonsumsiPage()),
         ],
       ),
     );
@@ -103,7 +105,7 @@ class AdminDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title, String subtitle, Color bgColor) {
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title, String subtitle, Color bgColor, Widget page) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -116,7 +118,7 @@ class AdminDashboard extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () {}, // TODO: navigasi ke halaman terkait
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
       ),
     );
   }
