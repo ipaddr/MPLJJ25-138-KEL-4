@@ -5,34 +5,104 @@ class InputDataSiswaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController namaController = TextEditingController();
-    final TextEditingController kelasController = TextEditingController();
-    final TextEditingController nisController = TextEditingController();
-    final TextEditingController keteranganController = TextEditingController();
+    final namaController = TextEditingController();
+    final kelasController = TextEditingController();
+    final nisController = TextEditingController();
+    final keteranganController = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Input Data Siswa")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: const Color(0xFFF5F8FF),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        toolbarHeight: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(controller: namaController, decoration: const InputDecoration(labelText: "Nama Siswa")),
-            TextField(controller: kelasController, decoration: const InputDecoration(labelText: "Kelas")),
-            TextField(controller: nisController, decoration: const InputDecoration(labelText: "Nomor Induk Siswa")),
-            TextField(controller: keteranganController, decoration: const InputDecoration(labelText: "Keterangan")),
-            const SizedBox(height: 20),
+            const Center(
+              child: Column(
+                children: [
+                  Text(
+                    "Input Data Siswa",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1C1C1C)),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    "Masukkan informasi dan detail siswa",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            const Text("Informasi Umum", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+
+            _buildInput("Nama Siswa", namaController),
+            _buildInput("Kelas", kelasController),
+            _buildInput("Nomor Induk Siswa", nisController),
+
+            const SizedBox(height: 24),
+            _buildInput("Keterangan tentang siswa (misal : alergi, dll)", keteranganController, isMultiline: true),
+
+            const SizedBox(height: 32),
+
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text("Kembali")),
-                ElevatedButton(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Informasi umum tersimpan."))),
-                  child: const Text("Simpan"),
-                ),
+                _buildRoundedButton(context, "Kembali", onTap: () => Navigator.pop(context)),
+                _buildRoundedButton(context, "Simpan", onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Informasi umum tersimpan."))
+                  );
+                }),
               ],
             )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInput(String label, TextEditingController controller, {bool isMultiline = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: controller,
+            maxLines: isMultiline ? 4 : 1,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoundedButton(BuildContext context, String text, {required VoidCallback onTap}) {
+    return Container(
+      width: 140,
+      height: 48,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black, width: 1),
+        color: const Color(0xFF2962FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextButton(
+        onPressed: onTap,
+        child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
