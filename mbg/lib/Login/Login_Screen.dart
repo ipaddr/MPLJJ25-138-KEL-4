@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../provider/user_provider.dart';
 import '../screens/main_screen.dart';
 import 'lupa_password.dart';
+import '../register/register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -12,7 +14,6 @@ class LoginScreen extends StatelessWidget {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
 
-    // Contoh role yang bisa dipilih setelah login berhasil (hardcoded untuk simulasi)
     final List<String> roles = [
       'Admin Sekolah',
       'Guru',
@@ -32,11 +33,14 @@ class LoginScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Judul
                 const Text(
                   'Login Aplikasi Makan Bergizi',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),
+
+                // Email
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
@@ -45,6 +49,8 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // Password
                 TextField(
                   controller: passwordController,
                   obscureText: true,
@@ -54,6 +60,8 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // Role Dropdown
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Pilih Role',
@@ -70,6 +78,8 @@ class LoginScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
+
+                // Lupa Password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -85,6 +95,8 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // Tombol Login
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -99,11 +111,11 @@ class LoginScreen extends StatelessWidget {
                         return;
                       }
 
-                      // Set role di provider
+                      // Set role ke provider
                       Provider.of<UserProvider>(context, listen: false)
                           .setRole(selectedRole!);
 
-                      // Navigasi ke main screen (dashboard)
+                      // Navigasi ke MainScreen
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
@@ -112,6 +124,33 @@ class LoginScreen extends StatelessWidget {
                       );
                     },
                     child: const Text('Login'),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Link ke Register
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RegisterScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text.rich(
+                    TextSpan(
+                      text: 'Belum punya akun? ',
+                      children: [
+                        TextSpan(
+                          text: 'Register',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
