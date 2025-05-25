@@ -22,7 +22,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-  final roleController = TextEditingController();
+
+  final List<String> roles = [
+    'Admin Sekolah',
+    'Guru',
+    'Orang Tua',
+    'Dinas Pendidikan',
+    'Tim Katering',
+  ];
+  String? selectedRole;
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +64,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildField("Username", "Buat username", usernameController),
               _buildPasswordField("Password", passwordController, showPassword, () => setState(() => showPassword = !showPassword)),
               _buildPasswordField("Konfirmasi Password", confirmPasswordController, showConfirmPassword, () => setState(() => showConfirmPassword = !showConfirmPassword)),
-              _buildField("Pilih Role", "Pillih role", roleController),
+              _buildRoleDropdown(),
               const SizedBox(height: 32),
               _buildPrimaryButton("Buat Akun", () {
+                if (selectedRole == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Silakan pilih role!"), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
                 // TODO: Implement register logic
                 Navigator.pushReplacement(
                   context,
@@ -135,6 +149,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Pilih Role", style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              hintText: "Pilih role",
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            value: selectedRole,
+            items: roles.map((role) => DropdownMenuItem(value: role, child: Text(role))).toList(),
+            onChanged: (value) {
+              setState(() {
+                selectedRole = value;
+              });
+            },
           ),
         ],
       ),
