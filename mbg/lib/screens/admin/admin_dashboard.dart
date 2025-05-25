@@ -1,6 +1,7 @@
-// admin_dashboard.dart
 import 'package:flutter/material.dart';
-import 'admin_dashboard_routes.dart';
+import 'input_data_siswa_page.dart';
+import 'distribusi_makanan_page.dart';
+import 'laporan_konsumsi_page.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
