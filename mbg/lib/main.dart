@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'provider/user_provider.dart';
 import 'theme/app_theme.dart';
-import 'Login/login_screen.dart';
+import 'splash_screen1.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
       title: 'Makan Gizi Gratis',
       debugShowCheckedModeBanner: false,
       theme: appTheme,
-      home: const LoginScreen(),
+      home: const SplashScreen1(),
     );
   }
 }
