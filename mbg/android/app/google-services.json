@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "949750270595",
+    "project_id": "makanbergiziapp",
+    "storage_bucket": "makanbergiziapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:949750270595:android:e017adaaad1d091950e9b6",
+        "android_client_info": {
+          "package_name": "com.example.makanbergizi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCm_0fHTIUttDRW3wrl67umriztmFBLP50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:949750270595:android:a8d9dd9cc7d2c36d50e9b6",
+        "android_client_info": {
+          "package_name": "com.example.mbg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCm_0fHTIUttDRW3wrl67umriztmFBLP50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
