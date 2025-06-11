@@ -20,7 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final phoneController = TextEditingController();
   final schoolController = TextEditingController();
 
-  final usernameController = TextEditingController();
+  final usernameController = TextEditingController(); // Ini bisa dihapus jika tidak digunakan
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
@@ -60,22 +60,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildField("No. Handphone", "012345678901", phoneController),
               _buildField("Asal Sekolah", "Isi nama sekolah", schoolController),
               const SizedBox(height: 32),
-              _buildPrimaryButton("Selanjutnya", () => setState(() => step = 2)),
+              _buildPrimaryButton("Selanjutnya", () {
+                // Validasi dasar untuk step 1 sebelum lanjut
+                if (fullNameController.text.isEmpty || emailController.text.isEmpty ||
+                    phoneController.text.isEmpty || schoolController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Harap lengkapi semua data pada bagian ini!"), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
+                setState(() => step = 2);
+              }),
             ] else ...[
+              // _buildField("Username", "Buat username", usernameController), // Dihapus jika tidak digunakan
               _buildPasswordField("Password", passwordController, showPassword, () => setState(() => showPassword = !showPassword)),
               _buildPasswordField("Konfirmasi Password", confirmPasswordController, showConfirmPassword, () => setState(() => showConfirmPassword = !showConfirmPassword)),
               _buildRoleDropdown(),
               const SizedBox(height: 32),
               _buildPrimaryButton("Buat Akun", () async {
+                // Simpan context ke variabel lokal untuk digunakan di seluruh async gap
+                final currentContext = context;
+
                 if (selectedRole == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                     const SnackBar(content: Text("Silakan pilih role!"), backgroundColor: Colors.red),
                   );
                   return;
                 }
 
                 if (passwordController.text != confirmPasswordController.text) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                     const SnackBar(content: Text("Password dan konfirmasi password tidak sama!"), backgroundColor: Colors.red),
                   );
                   return;
@@ -87,6 +101,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     password: passwordController.text.trim(),
                   );
 
+                  // Setelah await pertama, cek mounted
+                  if (!currentContext.mounted) return;
+
                   await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
                     'fullName': fullNameController.text.trim(),
                     'email': emailController.text.trim(),
@@ -95,12 +112,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     'role': selectedRole,
                   });
 
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  // Setelah await kedua, cek mounted
+                  if (!currentContext.mounted) return;
+
+                  ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                     const SnackBar(content: Text("Akun berhasil dibuat! Silakan login."), backgroundColor: Colors.green),
                   );
 
+                  if (!currentContext.mounted) return; // Cek sebelum navigasi
                   Navigator.pushReplacement(
-                    context,
+                    currentContext, // Gunakan currentContext
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 } on FirebaseAuthException catch (e) {
@@ -112,11 +133,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   } else {
                     message = 'Terjadi kesalahan saat registrasi: ${e.message}';
                   }
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  if (!currentContext.mounted) return; // Cek sebelum snackbar
+                  ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                     SnackBar(content: Text(message), backgroundColor: Colors.red),
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  if (!currentContext.mounted) return; // Cek sebelum snackbar
+                  ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                     SnackBar(content: Text('Terjadi kesalahan tidak terduga: $e'), backgroundColor: Colors.red),
                   );
                 }
@@ -126,6 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Center(
               child: GestureDetector(
                 onTap: () {
+                  // Ini adalah callback sinkronus, tidak perlu mounted check
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),

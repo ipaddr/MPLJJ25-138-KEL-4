@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // Import ini untuk DateFormat
 // import 'package:provider/provider.dart'; // Keep if you use provider for user info here
 // import '../../provider/user_provider.dart'; // Keep if you use user_provider here
 
@@ -26,29 +26,37 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
   void initState() {
     super.initState();
     _fetchReportData();
+    // Inisialisasi data mock di sini jika tidak ada data nyata dari Firestore
+    dataTidakMakanMingguan = [25, 45, 16, 25, 5]; // 
   }
 
   Future<void> _fetchReportData() async {
     try {
       // Hitung Total Siswa
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
+      // Cek mounted setelah await
+      if (!mounted) return; // 
+
       setState(() {
         totalSiswa = studentSnapshot.docs.length;
       });
 
       // Hitung Siswa Tidak Makan Hari Ini
-      final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now()); // DateFormat fixed here
+      final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
       QuerySnapshot distributionSnapshot = await FirebaseFirestore.instance
           .collection('foodDistributions')
           .where('date', isEqualTo: todayFormatted)
           .get();
+
+      // Cek mounted setelah await
+      if (!mounted) return; // 
 
       int currentDayNotEaten = 0;
       if (distributionSnapshot.docs.isNotEmpty) {
         // Ini asumsi: jika ada data distribusi dan jumlah hadir tidak sesuai total porsi, berarti ada yang tidak makan.
         // Anda perlu menyimpan data 'konsumsi per siswa' untuk perhitungan yang lebih akurat
         // Untuk demo sederhana, kita bisa anggap 25 orang tidak makan hari ini seperti mock data
-        currentDayNotEaten = 25; // Ganti dengan logika sebenarnya jika ada data konsumsi per siswa
+        currentDayNotEaten = 25; // 
         // Contoh (jika ada field 'totalPorsi' dan 'jumlahHadirVerified'):
         // var docData = distributionSnapshot.docs.first.data() as Map<String, dynamic>;
         // int totalPorsi = docData['totalPorsi'] ?? 0;
@@ -63,10 +71,12 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
       // Untuk menyederhanakan, kita akan tetap menggunakan data mock untuk grafik
       // atau mengimplementasikan agregasi data secara manual dari foodDistributions
       // Realistisnya, ini memerlukan Cloud Functions untuk menghitung agregat setiap hari.
-      dataTidakMakanMingguan = [25, 45, 16, 25, 5]; // Tetap pakai mock untuk cepat
+      // dataTidakMakanMingguan = [25, 45, 16, 25, 5]; // Sudah diinisialisasi di initState
       // Untuk implementasi sebenarnya, Anda akan mengambil data foodDistributions dari 7 hari terakhir
       // dan menghitung siswa yang tidak makan dari setiap hari.
     } catch (e) {
+      // Cek mounted di catch block
+      if (!mounted) return; // 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memuat laporan: $e"), backgroundColor: Colors.red),
       );
@@ -88,8 +98,8 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 12),
-            const Text("Laporan Konsumsi", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
+            const Text("Laporan Konsumsi", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), // 
+            const SizedBox(height: 24), // 
 
             // Total siswa dan tidak makan hari ini
             Row(
@@ -100,61 +110,61 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
               ],
             ),
 
-            const SizedBox(height: 32),
-            const Text("Total siswa yang tidak makan", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 32), // 
+            const Text("Total siswa yang tidak makan", style: TextStyle(fontWeight: FontWeight.bold)), // 
+            const SizedBox(height: 12), // 
             DropdownButton<String>(
-              value: selectedFilter,
-              items: filterOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: (val) => setState(() => selectedFilter = val!),
-              underline: Container(),
-              borderRadius: BorderRadius.circular(12),
+              value: selectedFilter, // 
+              items: filterOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), // 
+              onChanged: (val) => setState(() => selectedFilter = val!), // 
+              underline: Container(), // 
+              borderRadius: BorderRadius.circular(12), // 
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 16), // 
             SizedBox(
-              height: 180,
+              height: 180, // 
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(dataTidakMakanMingguan.length, (index) {
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        width: 30,
-                        height: dataTidakMakanMingguan[index].toDouble() * 3,
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(8),
+                crossAxisAlignment: CrossAxisAlignment.end, // 
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly, // 
+                children: List.generate(dataTidakMakanMingguan.length, (index) { // Gunakan dataTidakMakanMingguan 
+                  return Column( // 
+                    mainAxisAlignment: MainAxisAlignment.end, // 
+                    children: [ // 
+                      Container( // 
+                        width: 30, // 
+                        height: dataTidakMakanMingguan[index].toDouble() * 3, // Skala grafik 
+                        decoration: BoxDecoration( // 
+                          color: Colors.blue, // 
+                          borderRadius: BorderRadius.circular(8), // 
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          "${dataTidakMakanMingguan[index]}",
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        alignment: Alignment.center, // 
+                        child: Text( // 
+                          "${dataTidakMakanMingguan[index]}", // 
+                          style: const TextStyle(color: Colors.white, fontSize: 12), // 
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(hari[index], style: const TextStyle(fontSize: 13, color: Colors.black54))
+                      const SizedBox(height: 8), // 
+                      Text(hari[index], style: const TextStyle(fontSize: 13, color: Colors.black54)) // 
                     ],
                   );
                 }),
               ),
             ),
 
-            const Spacer(),
+            const Spacer(), // 
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildRoundedButton("Kembali", Icons.arrow_back, () => Navigator.pop(context)),
-                _buildRoundedButton("Export PDF", Icons.picture_as_pdf, () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("PDF laporan berhasil diunduh (fitur ini masih mock).")),
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly, // 
+              children: [ // 
+                _buildRoundedButton("Kembali", Icons.arrow_back, () => Navigator.pop(context)), // 
+                _buildRoundedButton("Export PDF", Icons.picture_as_pdf, () { // 
+                  ScaffoldMessenger.of(context).showSnackBar( // 
+                    const SnackBar(content: Text("PDF laporan berhasil diunduh (fitur ini masih mock).")), // 
                   );
                 }),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 24), // 
           ],
         ),
       ),
@@ -164,15 +174,15 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
   Widget _buildStatTile(String title, String value) {
     return Column(
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-        const SizedBox(height: 8),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center), // 
+        const SizedBox(height: 8), // 
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade100,
-            borderRadius: BorderRadius.circular(10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // 
+          decoration: BoxDecoration( // 
+            color: Colors.blue.shade100, // 
+            borderRadius: BorderRadius.circular(10), // 
           ),
-          child: Text(value, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+          child: Text(value, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)), // 
         ),
       ],
     );
@@ -180,17 +190,17 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
 
   Widget _buildRoundedButton(String text, IconData icon, VoidCallback onPressed) {
     return SizedBox(
-      width: 140,
-      height: 48,
+      width: 140, // 
+      height: 48, // 
       child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.white),
-        label: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2962FF),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Colors.black, width: 1),
+        icon: Icon(icon, color: Colors.white), // 
+        label: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), // 
+        onPressed: onPressed, // 
+        style: ElevatedButton.styleFrom( // 
+          backgroundColor: const Color(0xFF2962FF), // 
+          shape: RoundedRectangleBorder( // 
+            borderRadius: BorderRadius.circular(12), // 
+            side: const BorderSide(color: Colors.black, width: 1), // 
           ),
         ),
       ),

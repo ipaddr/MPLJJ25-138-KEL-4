@@ -75,12 +75,15 @@ class InputDataSiswaPage extends StatelessWidget {
                   context,
                   "Simpan",
                   onTap: () async {
-                    // Tambahkan async di sini
+                    // Simpan context ke variabel lokal
+                    final currentContext = context;
+
                     // Validasi input dasar
                     if (namaController.text.isEmpty ||
                         kelasController.text.isEmpty ||
                         nisController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      // Gunakan currentContext
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text(
                             "Harap isi semua kolom informasi umum!",
@@ -92,15 +95,16 @@ class InputDataSiswaPage extends StatelessWidget {
                     }
 
                     try {
-                      // Tambahkan data siswa ke koleksi 'students' di Firestore
                       await FirebaseFirestore.instance.collection('students').add({
                         'nama': namaController.text.trim(),
                         'kelas': kelasController.text.trim(),
                         'nis': nisController.text.trim(),
                         'keterangan': keteranganController.text.trim(),
-                        'createdAt':
-                            Timestamp.now(), // Untuk menyimpan waktu pembuatan data
+                        'createdAt': Timestamp.now(),
                       });
+
+                      // Setelah await, cek apakah context masih mounted
+                      if (!currentContext.mounted) return;
 
                       // Bersihkan input setelah berhasil disimpan
                       namaController.clear();
@@ -108,14 +112,19 @@ class InputDataSiswaPage extends StatelessWidget {
                       nisController.clear();
                       keteranganController.clear();
 
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      // Gunakan currentContext
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text("Data siswa berhasil disimpan!"),
                           backgroundColor: Colors.green,
                         ),
                       );
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      // Di catch block, cek apakah context masih mounted
+                      if (!currentContext.mounted) return;
+
+                      // Gunakan currentContext
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
                           content: Text("Gagal menyimpan data: $e"),
                           backgroundColor: Colors.red,
@@ -163,7 +172,7 @@ class InputDataSiswaPage extends StatelessWidget {
   }
 
   Widget _buildRoundedButton(
-    BuildContext context,
+    BuildContext context, // context parameter ini tetap valid di sini
     String text, {
     required VoidCallback onTap,
   }) {

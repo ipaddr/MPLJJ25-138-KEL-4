@@ -33,11 +33,12 @@ class SplashScreen2 extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
               },
-              child: const Text("Selanjutnya"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
+              // Pindahkan 'child' ke akhir
+              child: const Text("Selanjutnya"),
             ),
           ],
         ),

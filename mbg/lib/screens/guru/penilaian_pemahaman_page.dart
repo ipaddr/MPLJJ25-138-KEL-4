@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
-import '../../provider/user_provider.dart';
+import 'package:provider/provider.dart'; //
+import '../../provider/user_provider.dart'; //
 
 class PenilaianPemahamanPage extends StatefulWidget {
   const PenilaianPemahamanPage({super.key});
@@ -31,6 +31,9 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
   Future<void> _fetchStudents() async {
     try {
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
+      // Check mounted after await
+      if (!mounted) return; //
+
       setState(() {
         students = studentSnapshot.docs.map((doc) => {
           'id': doc.id,
@@ -41,6 +44,8 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
         }
       });
     } catch (e) {
+      // Check mounted in catch block
+      if (!mounted) return; //
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memuat daftar siswa: $e"), backgroundColor: Colors.red),
       );
@@ -66,8 +71,8 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                 border: OutlineInputBorder(),
               ),
               value: selectedStudentId,
-              items: students.map<DropdownMenuItem<String>>((student) { // Explicitly cast to DropdownMenuItem<String>
-                return DropdownMenuItem<String>( // Explicitly cast to DropdownMenuItem<String>
+              items: students.map<DropdownMenuItem<String>>((student) {
+                return DropdownMenuItem<String>(
                   value: student['id'],
                   child: Text(student['nama']),
                 );
@@ -80,6 +85,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
             ),
             const SizedBox(height: 20),
 
+            // Perbaikan: Hapus .toList() jika tidak diperlukan oleh spread operator
             ...nilai.keys.map((kriteria) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +109,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                   const SizedBox(height: 12),
                 ],
               );
-            }).toList(), // Add .toList() here to avoid potential Iterable issue
+            }), // .toList() Dihapus di sini 
             const Text("Pengamatan guru", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             TextFormField(
@@ -124,22 +130,25 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    // Ambil context ke variabel lokal
+                    final currentContext = context;
+
                     if (selectedStudentId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                         const SnackBar(content: Text("Silakan pilih siswa terlebih dahulu!"), backgroundColor: Colors.red),
                       );
                       return;
                     }
 
                     if (nilai.values.any((score) => score == 0)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                         const SnackBar(content: Text("Harap berikan nilai untuk semua kriteria!"), backgroundColor: Colors.red),
                       );
                       return;
                     }
 
                     try {
-                      final user = Provider.of<UserProvider>(context, listen: false);
+                      final user = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
                       await FirebaseFirestore.instance.collection('understandingAssessments').add({
                         'studentId': selectedStudentId,
                         'teacherId': user.uid,
@@ -150,9 +159,12 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         'komentarGuru': komentar,
                       });
 
+                      // Setelah await, cek mounted
+                      if (!currentContext.mounted) return; //
+
                       showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
+                        context: currentContext, // Gunakan currentContext
+                        builder: (ctx) => AlertDialog( // Gunakan ctx sebagai nama variabel context builder
                           title: const Text("Simpan Berhasil"),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -165,7 +177,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                           ),
                           actions: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => Navigator.pop(ctx), // Gunakan ctx
                               child: const Text("OK"),
                             ),
                           ],
@@ -177,7 +189,9 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         komentar = "";
                       });
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      // Di catch block, cek mounted
+                      if (!currentContext.mounted) return; //
+                      ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                         SnackBar(content: Text("Gagal menyimpan penilaian: $e"), backgroundColor: Colors.red),
                       );
                     }

@@ -17,6 +17,7 @@ class SplashScreen1 extends StatelessWidget {
                 color: Colors.blue,
                 borderRadius: BorderRadius.circular(24),
               ),
+              // Pindahkan 'child' ke akhir
               child: const Icon(Icons.restaurant, color: Colors.white, size: 40),
             ),
             const SizedBox(height: 24),
@@ -27,11 +28,12 @@ class SplashScreen1 extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const SplashScreen2()),
                 );
               },
-              child: const Text("Mulai"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
+              // Pindahkan 'child' ke akhir
+              child: const Text("Mulai"),
             )
           ],
         ),

@@ -112,7 +112,8 @@ class GuruDashboard extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle),
         trailing: CircleAvatar(
-          backgroundColor: iconColor.withOpacity(0.1),
+          // Perbaikan di sini: Mengganti withOpacity dengan withAlpha
+          backgroundColor: iconColor.withAlpha((255 * 0.1).round()), // Menggunakan withAlpha
           child: Icon(icon, color: iconColor),
         ),
         onTap: onTap,

@@ -24,6 +24,9 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
     try {
       // Ambil semua siswa (Admin Sekolah menginput siswa)
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
+      // Check mounted after first await
+      if (!mounted) return; //
+
       List<Map<String, dynamic>> fetchedSiswa = [];
 
       for (var doc in studentSnapshot.docs) {
@@ -37,6 +40,9 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
             .orderBy('evaluationDate', descending: true) // Ambil yang terbaru
             .limit(1)
             .get();
+
+        // Check mounted after each evaluation fetch inside loop
+        if (!mounted) return; //
 
         int beforeScore = 0;
         int afterScore = 0;
@@ -55,10 +61,14 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
         });
       }
 
+      // Check mounted before setState
+      if (!mounted) return; //
       setState(() {
         siswa = fetchedSiswa;
       });
     } catch (e) {
+      // Check mounted in catch block
+      if (!mounted) return; //
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memuat data siswa dan evaluasi: $e"), backgroundColor: Colors.red),
       );
@@ -81,10 +91,14 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
 
   // Fungsi untuk update nilai ke Firestore
   Future<void> _updateStudentEvaluation(String studentId, int newBeforeScore, int newAfterScore) async {
+    // Ambil context ke variabel lokal
+    final currentContext = context;
+
     try {
-      final user = Provider.of<UserProvider>(context, listen: false);
-      if (user.uid == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
+      if (userProvider.uid == null) {
+        if (!currentContext.mounted) return; // Check mounted
+        ScaffoldMessenger.of(currentContext).showSnackBar(
           const SnackBar(content: Text("Pengguna tidak terautentikasi."), backgroundColor: Colors.red),
         );
         return;
@@ -94,8 +108,10 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
       QuerySnapshot existingEval = await FirebaseFirestore.instance
           .collection('academicEvaluations')
           .where('studentId', isEqualTo: studentId)
-          .where('teacherId', isEqualTo: user.uid) // Pastikan guru yang sama
+          .where('teacherId', isEqualTo: userProvider.uid) // Pastikan guru yang sama
           .get();
+
+      if (!currentContext.mounted) return; // Check mounted after await
 
       if (existingEval.docs.isNotEmpty) {
         // Update yang sudah ada
@@ -108,17 +124,20 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
         // Buat baru
         await FirebaseFirestore.instance.collection('academicEvaluations').add({
           'studentId': studentId,
-          'teacherId': user.uid,
+          'teacherId': userProvider.uid,
           'beforeMbgScore': newBeforeScore,
           'afterMbgScore': newAfterScore,
           'evaluationDate': Timestamp.now(),
         });
       }
-      ScaffoldMessenger.of(context).showSnackBar(
+      
+      if (!currentContext.mounted) return; // Check mounted before snackbar
+      ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text("Nilai berhasil diperbarui!"), backgroundColor: Colors.green),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!currentContext.mounted) return; // Check mounted in catch
+      ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(content: Text("Gagal memperbarui nilai: $e"), backgroundColor: Colors.red),
       );
     }

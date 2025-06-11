@@ -105,6 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: () async {
                       if (selectedRole == null) {
+                        // Di sini context selalu valid
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Pilih role terlebih dahulu!'),
@@ -114,30 +115,41 @@ class _LoginScreenState extends State<LoginScreen> {
                         return;
                       }
 
+                      // Simpan context ke variabel lokal sebelum await pertama
+                      // agar linter tidak khawatir dengan 'BuildContexts across async gaps'
+                      final currentContext = context;
+
                       try {
                         UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
                           email: emailController.text.trim(),
                           password: passwordController.text.trim(),
                         );
 
+                        // Gunakan currentContext.mounted untuk check
+                        if (!currentContext.mounted) return;
+
                         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+
+                        if (!currentContext.mounted) return;
 
                         if (userDoc.exists) {
                           String? storedRole = userDoc.get('role');
 
                           if (storedRole == selectedRole) {
-                            Provider.of<UserProvider>(context, listen: false)
+                            Provider.of<UserProvider>(currentContext, listen: false) // Gunakan currentContext
                                 .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!);
 
+                            if (!currentContext.mounted) return; // Cek sebelum navigasi
                             Navigator.pushReplacement(
-                              context,
+                              currentContext, // Gunakan currentContext
                               MaterialPageRoute(
                                 builder: (context) => const MainScreen(),
                               ),
                             );
                           } else {
                             await FirebaseAuth.instance.signOut();
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            if (!currentContext.mounted) return; // Cek sebelum snackbar
+                            ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                               const SnackBar(
                                 content: Text('Role yang Anda pilih tidak cocok dengan akun ini.'),
                                 backgroundColor: Colors.red,
@@ -146,7 +158,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         } else {
                           await FirebaseAuth.instance.signOut();
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          if (!currentContext.mounted) return; // Cek sebelum snackbar
+                          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                             const SnackBar(
                               content: Text('Data pengguna tidak ditemukan. Silakan hubungi admin.'),
                               backgroundColor: Colors.red,
@@ -164,11 +177,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         } else {
                           message = 'Terjadi kesalahan saat login: ${e.message}';
                         }
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!currentContext.mounted) return; // Cek sebelum snackbar
+                        ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                           SnackBar(content: Text(message), backgroundColor: Colors.red),
                         );
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!currentContext.mounted) return; // Cek sebelum snackbar
+                        ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
                           SnackBar(content: Text('Terjadi kesalahan tidak terduga: $e'), backgroundColor: Colors.red),
                         );
                       }
@@ -180,6 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 GestureDetector(
                   onTap: () {
+                    // Ini adalah callback sinkronus, jadi tidak perlu mounted check
                     Navigator.push(
                       context,
                       MaterialPageRoute(
