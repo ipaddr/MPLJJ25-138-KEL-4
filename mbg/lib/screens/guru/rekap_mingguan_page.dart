@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Hapus atau jadikan komentar jika tidak digunakan
+// import 'package:provider/provider.dart'; // Hapus atau jadikan komentar jika tidak digunakan
+// import '../../provider/user_provider.dart'; // Hapus atau jadikan komentar jika tidak digunakan
 
-class RekapMingguanPage extends StatelessWidget {
+class RekapMingguanPage extends StatefulWidget {
   const RekapMingguanPage({super.key});
 
+  @override
+  State<RekapMingguanPage> createState() => _RekapMingguanPageState();
+}
+
+class _RekapMingguanPageState extends State<RekapMingguanPage> {
   final List<double> nilaiHarian = const [60, 75, 70, 85, 90, 95, 98];
   final List<String> hari = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -63,7 +71,7 @@ class RekapMingguanPage extends StatelessWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(context),
                             child: const Text("OK"),
-                          )
+                          ),
                         ],
                       ),
                     );
@@ -72,7 +80,7 @@ class RekapMingguanPage extends StatelessWidget {
                   label: const Text("Export PDF"),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),

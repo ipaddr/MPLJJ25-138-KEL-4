@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -33,16 +34,38 @@ class ForgotPasswordScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                final email = emailController.text;
+              onPressed: () async {
+                final email = emailController.text.trim();
                 if (email.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Link reset dikirim ke $email'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  // Tambahkan logika untuk mengirim email reset password di sini
+                  try {
+                    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Link reset dikirim ke $email. Silakan cek email Anda.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } on FirebaseAuthException catch (e) {
+                    String message;
+                    if (e.code == 'user-not-found') {
+                      message = 'Tidak ada pengguna dengan email tersebut.';
+                    } else {
+                      message = 'Gagal mengirim link reset: ${e.message}';
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(message),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Terjadi kesalahan tidak terduga: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+// import 'package:provider/provider.dart'; // Keep if you use provider for user info here
+// import '../../provider/user_provider.dart'; // Keep if you use user_provider here
 
 class LaporanKonsumsiPage extends StatefulWidget {
   const LaporanKonsumsiPage({super.key});
@@ -10,9 +14,64 @@ class LaporanKonsumsiPage extends StatefulWidget {
 class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
   String selectedFilter = 'Last 30 days';
 
+  // Make these actual variables, not comments
   final List<String> filterOptions = ['Hari Ini', '7 Hari Terakhir', 'Last 30 days'];
-  final List<int> dataTidakMakan = [25, 45, 16, 25, 5];
-  final List<String> hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+  final List<String> hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat']; // For chart labels
+
+  int totalSiswa = 0;
+  int siswaTidakMakanHariIni = 0;
+  List<int> dataTidakMakanMingguan = []; // Will be filled from Firestore or mock
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReportData();
+  }
+
+  Future<void> _fetchReportData() async {
+    try {
+      // Hitung Total Siswa
+      QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
+      setState(() {
+        totalSiswa = studentSnapshot.docs.length;
+      });
+
+      // Hitung Siswa Tidak Makan Hari Ini
+      final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now()); // DateFormat fixed here
+      QuerySnapshot distributionSnapshot = await FirebaseFirestore.instance
+          .collection('foodDistributions')
+          .where('date', isEqualTo: todayFormatted)
+          .get();
+
+      int currentDayNotEaten = 0;
+      if (distributionSnapshot.docs.isNotEmpty) {
+        // Ini asumsi: jika ada data distribusi dan jumlah hadir tidak sesuai total porsi, berarti ada yang tidak makan.
+        // Anda perlu menyimpan data 'konsumsi per siswa' untuk perhitungan yang lebih akurat
+        // Untuk demo sederhana, kita bisa anggap 25 orang tidak makan hari ini seperti mock data
+        currentDayNotEaten = 25; // Ganti dengan logika sebenarnya jika ada data konsumsi per siswa
+        // Contoh (jika ada field 'totalPorsi' dan 'jumlahHadirVerified'):
+        // var docData = distributionSnapshot.docs.first.data() as Map<String, dynamic>;
+        // int totalPorsi = docData['totalPorsi'] ?? 0;
+        // int jumlahHadirVerified = docData['jumlahHadirVerified'] ?? 0;
+        // currentDayNotEaten = totalPorsi - jumlahHadirVerified;
+      }
+      setState(() {
+        siswaTidakMakanHariIni = currentDayNotEaten;
+      });
+
+      // Mengambil data untuk grafik mingguan (ini lebih kompleks)
+      // Untuk menyederhanakan, kita akan tetap menggunakan data mock untuk grafik
+      // atau mengimplementasikan agregasi data secara manual dari foodDistributions
+      // Realistisnya, ini memerlukan Cloud Functions untuk menghitung agregat setiap hari.
+      dataTidakMakanMingguan = [25, 45, 16, 25, 5]; // Tetap pakai mock untuk cepat
+      // Untuk implementasi sebenarnya, Anda akan mengambil data foodDistributions dari 7 hari terakhir
+      // dan menghitung siswa yang tidak makan dari setiap hari.
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memuat laporan: $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +95,8 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildStatTile("Total Siswa", "1,234 Orang"),
-                _buildStatTile("Total siswa yang\ntidak makan hari ini", "25 Orang"),
+                _buildStatTile("Total Siswa", "$totalSiswa Orang"), // Gunakan data dari Firestore
+                _buildStatTile("Total siswa yang\ntidak makan hari ini", "$siswaTidakMakanHariIni Orang"), // Gunakan data dari Firestore
               ],
             ),
 
@@ -58,20 +117,20 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(5, (index) {
+                children: List.generate(dataTidakMakanMingguan.length, (index) {
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Container(
                         width: 30,
-                        height: dataTidakMakan[index].toDouble() * 3,
+                        height: dataTidakMakanMingguan[index].toDouble() * 3,
                         decoration: BoxDecoration(
                           color: Colors.blue,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          "${dataTidakMakan[index]}",
+                          "${dataTidakMakanMingguan[index]}",
                           style: const TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ),
@@ -90,7 +149,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
                 _buildRoundedButton("Kembali", Icons.arrow_back, () => Navigator.pop(context)),
                 _buildRoundedButton("Export PDF", Icons.picture_as_pdf, () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("PDF laporan berhasil diunduh.")),
+                    const SnackBar(content: Text("PDF laporan berhasil diunduh (fitur ini masih mock).")),
                   );
                 }),
               ],

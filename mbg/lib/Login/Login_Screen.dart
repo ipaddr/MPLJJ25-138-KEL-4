@@ -1,29 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../provider/user_provider.dart';
 import '../screens/main_screen.dart';
 import 'lupa_password.dart';
 import '../register/register_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  final List<String> roles = [
+    'Admin Sekolah',
+    'Guru',
+    'Orang Tua',
+    'Dinas Pendidikan',
+    'Tim Katering',
+  ];
+  String? selectedRole;
+
+  @override
   Widget build(BuildContext context) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-
-    final List<String> roles = [
-      'Admin Sekolah',
-      'Guru',
-      'Orang Tua',
-      'Dinas Pendidikan',
-      'Tim Katering',
-    ];
-
-    String? selectedRole;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
@@ -33,14 +39,12 @@ class LoginScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Judul
                 const Text(
                   'Login Aplikasi Makan Bergizi',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),
 
-                // Email
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
@@ -50,7 +54,6 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Password
                 TextField(
                   controller: passwordController,
                   obscureText: true,
@@ -61,12 +64,12 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Role Dropdown
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Pilih Role',
                     border: OutlineInputBorder(),
                   ),
+                  value: selectedRole,
                   items: roles
                       .map((role) => DropdownMenuItem(
                             value: role,
@@ -74,12 +77,13 @@ class LoginScreen extends StatelessWidget {
                           ))
                       .toList(),
                   onChanged: (value) {
-                    selectedRole = value;
+                    setState(() {
+                      selectedRole = value;
+                    });
                   },
                 ),
                 const SizedBox(height: 16),
 
-                // Lupa Password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -96,11 +100,10 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Tombol Login
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (selectedRole == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -111,24 +114,70 @@ class LoginScreen extends StatelessWidget {
                         return;
                       }
 
-                      // Set role ke provider
-                      Provider.of<UserProvider>(context, listen: false)
-                          .setRole(selectedRole!);
+                      try {
+                        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+                          email: emailController.text.trim(),
+                          password: passwordController.text.trim(),
+                        );
 
-                      // Navigasi ke MainScreen
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MainScreen(),
-                        ),
-                      );
+                        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+
+                        if (userDoc.exists) {
+                          String? storedRole = userDoc.get('role');
+
+                          if (storedRole == selectedRole) {
+                            Provider.of<UserProvider>(context, listen: false)
+                                .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!);
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const MainScreen(),
+                              ),
+                            );
+                          } else {
+                            await FirebaseAuth.instance.signOut();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Role yang Anda pilih tidak cocok dengan akun ini.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        } else {
+                          await FirebaseAuth.instance.signOut();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Data pengguna tidak ditemukan. Silakan hubungi admin.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } on FirebaseAuthException catch (e) {
+                        String message;
+                        if (e.code == 'user-not-found') {
+                          message = 'Email tidak terdaftar.';
+                        } else if (e.code == 'wrong-password') {
+                          message = 'Password salah.';
+                        } else if (e.code == 'invalid-email') {
+                          message = 'Format email tidak valid.';
+                        } else {
+                          message = 'Terjadi kesalahan saat login: ${e.message}';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(message), backgroundColor: Colors.red),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Terjadi kesalahan tidak terduga: $e'), backgroundColor: Colors.red),
+                        );
+                      }
                     },
                     child: const Text('Login'),
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Link ke Register
                 GestureDetector(
                   onTap: () {
                     Navigator.push(

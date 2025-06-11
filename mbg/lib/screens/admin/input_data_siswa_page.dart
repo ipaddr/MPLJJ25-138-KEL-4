@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InputDataSiswaPage extends StatelessWidget {
   const InputDataSiswaPage({super.key});
@@ -27,7 +28,11 @@ class InputDataSiswaPage extends StatelessWidget {
                 children: [
                   Text(
                     "Input Data Siswa",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1C1C1C)),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1C1C1C),
+                    ),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -39,7 +44,10 @@ class InputDataSiswaPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            const Text("Informasi Umum", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              "Informasi Umum",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
 
             _buildInput("Nama Siswa", namaController),
@@ -47,28 +55,88 @@ class InputDataSiswaPage extends StatelessWidget {
             _buildInput("Nomor Induk Siswa", nisController),
 
             const SizedBox(height: 24),
-            _buildInput("Keterangan tentang siswa (misal : alergi, dll)", keteranganController, isMultiline: true),
+            _buildInput(
+              "Keterangan tentang siswa (misal : alergi, dll)",
+              keteranganController,
+              isMultiline: true,
+            ),
 
             const SizedBox(height: 32),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildRoundedButton(context, "Kembali", onTap: () => Navigator.pop(context)),
-                _buildRoundedButton(context, "Simpan", onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Informasi umum tersimpan."))
-                  );
-                }),
+                _buildRoundedButton(
+                  context,
+                  "Kembali",
+                  onTap: () => Navigator.pop(context),
+                ),
+                _buildRoundedButton(
+                  context,
+                  "Simpan",
+                  onTap: () async {
+                    // Tambahkan async di sini
+                    // Validasi input dasar
+                    if (namaController.text.isEmpty ||
+                        kelasController.text.isEmpty ||
+                        nisController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Harap isi semua kolom informasi umum!",
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      // Tambahkan data siswa ke koleksi 'students' di Firestore
+                      await FirebaseFirestore.instance.collection('students').add({
+                        'nama': namaController.text.trim(),
+                        'kelas': kelasController.text.trim(),
+                        'nis': nisController.text.trim(),
+                        'keterangan': keteranganController.text.trim(),
+                        'createdAt':
+                            Timestamp.now(), // Untuk menyimpan waktu pembuatan data
+                      });
+
+                      // Bersihkan input setelah berhasil disimpan
+                      namaController.clear();
+                      kelasController.clear();
+                      nisController.clear();
+                      keteranganController.clear();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Data siswa berhasil disimpan!"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Gagal menyimpan data: $e"),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInput(String label, TextEditingController controller, {bool isMultiline = false}) {
+  Widget _buildInput(
+    String label,
+    TextEditingController controller, {
+    bool isMultiline = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -80,7 +148,10 @@ class InputDataSiswaPage extends StatelessWidget {
             controller: controller,
             maxLines: isMultiline ? 4 : 1,
             decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 14,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -91,7 +162,11 @@ class InputDataSiswaPage extends StatelessWidget {
     );
   }
 
-  Widget _buildRoundedButton(BuildContext context, String text, {required VoidCallback onTap}) {
+  Widget _buildRoundedButton(
+    BuildContext context,
+    String text, {
+    required VoidCallback onTap,
+  }) {
     return Container(
       width: 140,
       height: 48,
@@ -102,7 +177,13 @@ class InputDataSiswaPage extends StatelessWidget {
       ),
       child: TextButton(
         onPressed: onTap,
-        child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

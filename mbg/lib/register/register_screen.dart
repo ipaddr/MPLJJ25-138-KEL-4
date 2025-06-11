@@ -1,5 +1,6 @@
-// register_screen.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../login/login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -61,23 +62,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 32),
               _buildPrimaryButton("Selanjutnya", () => setState(() => step = 2)),
             ] else ...[
-              _buildField("Username", "Buat username", usernameController),
               _buildPasswordField("Password", passwordController, showPassword, () => setState(() => showPassword = !showPassword)),
               _buildPasswordField("Konfirmasi Password", confirmPasswordController, showConfirmPassword, () => setState(() => showConfirmPassword = !showConfirmPassword)),
               _buildRoleDropdown(),
               const SizedBox(height: 32),
-              _buildPrimaryButton("Buat Akun", () {
+              _buildPrimaryButton("Buat Akun", () async {
                 if (selectedRole == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Silakan pilih role!"), backgroundColor: Colors.red),
                   );
                   return;
                 }
-                // TODO: Implement register logic
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
+
+                if (passwordController.text != confirmPasswordController.text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Password dan konfirmasi password tidak sama!"), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
+
+                try {
+                  UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                    email: emailController.text.trim(),
+                    password: passwordController.text.trim(),
+                  );
+
+                  await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+                    'fullName': fullNameController.text.trim(),
+                    'email': emailController.text.trim(),
+                    'phoneNumber': phoneController.text.trim(),
+                    'schoolName': schoolController.text.trim(),
+                    'role': selectedRole,
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Akun berhasil dibuat! Silakan login."), backgroundColor: Colors.green),
+                  );
+
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                } on FirebaseAuthException catch (e) {
+                  String message;
+                  if (e.code == 'weak-password') {
+                    message = 'Password terlalu lemah.';
+                  } else if (e.code == 'email-already-in-use') {
+                    message = 'Email sudah terdaftar.';
+                  } else {
+                    message = 'Terjadi kesalahan saat registrasi: ${e.message}';
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(message), backgroundColor: Colors.red),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Terjadi kesalahan tidak terduga: $e'), backgroundColor: Colors.red),
+                  );
+                }
               }),
             ],
             const SizedBox(height: 24),
