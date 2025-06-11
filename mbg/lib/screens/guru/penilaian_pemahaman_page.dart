@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart'; //
-import '../../provider/user_provider.dart'; //
+import 'package:provider/provider.dart';
+import '../../provider/user_provider.dart';
 
 class PenilaianPemahamanPage extends StatefulWidget {
   const PenilaianPemahamanPage({super.key});
@@ -32,7 +32,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
     try {
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
       // Check mounted after await
-      if (!mounted) return; //
+      if (!mounted) return;
 
       setState(() {
         students = studentSnapshot.docs.map((doc) => {
@@ -45,7 +45,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
       });
     } catch (e) {
       // Check mounted in catch block
-      if (!mounted) return; //
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memuat daftar siswa: $e"), backgroundColor: Colors.red),
       );
@@ -85,7 +85,8 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
             ),
             const SizedBox(height: 20),
 
-            // Perbaikan: Hapus .toList() jika tidak diperlukan oleh spread operator
+            // Ini adalah Children dari Column. Pastikan kurung kurawal penutupnya benar.
+            // Hapus .toList() yang tidak perlu jika ada.
             ...nilai.keys.map((kriteria) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +110,8 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                   const SizedBox(height: 12),
                 ],
               );
-            }), // .toList() Dihapus di sini 
+            }), // .toList() Dihapus di sini
+
             const Text("Pengamatan guru", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             TextFormField(
@@ -130,25 +132,24 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    // Ambil context ke variabel lokal
                     final currentContext = context;
 
                     if (selectedStudentId == null) {
-                      ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(content: Text("Silakan pilih siswa terlebih dahulu!"), backgroundColor: Colors.red),
                       );
                       return;
                     }
 
                     if (nilai.values.any((score) => score == 0)) {
-                      ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(content: Text("Harap berikan nilai untuk semua kriteria!"), backgroundColor: Colors.red),
                       );
                       return;
                     }
 
                     try {
-                      final user = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
+                      final user = Provider.of<UserProvider>(currentContext, listen: false);
                       await FirebaseFirestore.instance.collection('understandingAssessments').add({
                         'studentId': selectedStudentId,
                         'teacherId': user.uid,
@@ -159,39 +160,22 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         'komentarGuru': komentar,
                       });
 
-                      // Setelah await, cek mounted
-                      if (!currentContext.mounted) return; //
+                      if (!currentContext.mounted) return;
 
-                      showDialog(
-                        context: currentContext, // Gunakan currentContext
-                        builder: (ctx) => AlertDialog( // Gunakan ctx sebagai nama variabel context builder
-                          title: const Text("Simpan Berhasil"),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text("Penilaian untuk siswa: ${students.firstWhere((s) => s['id'] == selectedStudentId)['nama']}"),
-                              Text("Nilai: ${nilai.toString()}"),
-                              const SizedBox(height: 8),
-                              Text("Komentar: $komentar"),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx), // Gunakan ctx
-                              child: const Text("OK"),
-                            ),
-                          ],
-                        ),
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
+                        const SnackBar(content: Text("Penilaian berhasil disimpan!"), backgroundColor: Colors.green),
                       );
 
                       setState(() {
                         nilai.forEach((key, value) => nilai[key] = 0);
                         komentar = "";
+                        // Perbarui daftar siswa setelah menyimpan
+                        students.removeWhere((s) => s['id'] == selectedStudentId);
+                        selectedStudentId = students.isNotEmpty ? students.first['id'] : null;
                       });
                     } catch (e) {
-                      // Di catch block, cek mounted
-                      if (!currentContext.mounted) return; //
-                      ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                      if (!currentContext.mounted) return;
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(content: Text("Gagal menyimpan penilaian: $e"), backgroundColor: Colors.red),
                       );
                     }

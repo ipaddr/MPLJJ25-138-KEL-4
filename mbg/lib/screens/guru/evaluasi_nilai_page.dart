@@ -91,37 +91,33 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
 
   // Fungsi untuk update nilai ke Firestore
   Future<void> _updateStudentEvaluation(String studentId, int newBeforeScore, int newAfterScore) async {
-    // Ambil context ke variabel lokal
-    final currentContext = context;
+    final currentContext = context; // Ambil context ke variabel lokal
 
     try {
-      final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
+      final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
       if (userProvider.uid == null) {
-        if (!currentContext.mounted) return; // Check mounted
+        if (!currentContext.mounted) return;
         ScaffoldMessenger.of(currentContext).showSnackBar(
           const SnackBar(content: Text("Pengguna tidak terautentikasi."), backgroundColor: Colors.red),
         );
         return;
       }
 
-      // Coba cari dokumen evaluasi yang sudah ada untuk siswa ini, jika tidak ada, buat baru
       QuerySnapshot existingEval = await FirebaseFirestore.instance
           .collection('academicEvaluations')
           .where('studentId', isEqualTo: studentId)
-          .where('teacherId', isEqualTo: userProvider.uid) // Pastikan guru yang sama
+          .where('teacherId', isEqualTo: userProvider.uid)
           .get();
 
-      if (!currentContext.mounted) return; // Check mounted after await
+      if (!currentContext.mounted) return;
 
       if (existingEval.docs.isNotEmpty) {
-        // Update yang sudah ada
         await FirebaseFirestore.instance.collection('academicEvaluations').doc(existingEval.docs.first.id).update({
           'beforeMbgScore': newBeforeScore,
           'afterMbgScore': newAfterScore,
           'evaluationDate': Timestamp.now(),
         });
       } else {
-        // Buat baru
         await FirebaseFirestore.instance.collection('academicEvaluations').add({
           'studentId': studentId,
           'teacherId': userProvider.uid,
@@ -130,13 +126,13 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
           'evaluationDate': Timestamp.now(),
         });
       }
-      
-      if (!currentContext.mounted) return; // Check mounted before snackbar
+
+      if (!currentContext.mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text("Nilai berhasil diperbarui!"), backgroundColor: Colors.green),
       );
     } catch (e) {
-      if (!currentContext.mounted) return; // Check mounted in catch
+      if (!currentContext.mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(content: Text("Gagal memperbarui nilai: $e"), backgroundColor: Colors.red),
       );
@@ -144,7 +140,10 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+Widget build(BuildContext context) {
+    // ... (bagian build Anda, tidak perlu perubahan besar di sini karena sudah menggunakan `siswa` state)
+    // Pastikan `siswa.isEmpty` sudah menangani kasus tidak ada siswa
+    // dan TextFormFields menggunakan `onChanged` untuk memanggil `_updateStudentEvaluation`.
     return Scaffold(
       appBar: AppBar(title: const Text("Evaluasi Nilai Akademik")),
       body: Padding(
@@ -154,91 +153,78 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
           children: [
             const Text("Rekam kinerja sebelum dan sesudah makan", style: TextStyle(fontSize: 16)),
             const SizedBox(height: 12),
-            Table(
-              border: TableBorder.all(),
-              children: [
-                const TableRow(children: [
-                  Padding(padding: EdgeInsets.all(8), child: Text("Siswa/Siswi")),
-                  Center(child: Text("Sebelum MBG")),
-                  Center(child: Text("Sesudah MBG")),
-                  Center(child: Text("Beda Nilai")),
-                ]),
-                for (int i = 0; i < siswa.length; i++)
-                  TableRow(children: [
-                    Padding(padding: const EdgeInsets.all(8), child: Text(siswa[i]['nama'])),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: TextFormField(
-                        initialValue: siswa[i]['sebelum'].toString(),
-                        keyboardType: TextInputType.number,
-                        onChanged: (val) {
-                          int newScore = int.tryParse(val) ?? 0;
-                          setState(() {
-                            siswa[i]['sebelum'] = newScore;
-                          });
-                          _updateStudentEvaluation(siswa[i]['id'], newScore, siswa[i]['sesudah']); // Panggil update
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: TextFormField(
-                        initialValue: siswa[i]['sesudah'].toString(),
-                        keyboardType: TextInputType.number,
-                        onChanged: (val) {
-                          int newScore = int.tryParse(val) ?? 0;
-                          setState(() {
-                            siswa[i]['sesudah'] = newScore;
-                          });
-                          _updateStudentEvaluation(siswa[i]['id'], siswa[i]['sebelum'], newScore); // Panggil update
-                        },
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        "${siswa[i]['sesudah'] - siswa[i]['sebelum'] >= 0 ? '+' : ''}${siswa[i]['sesudah'] - siswa[i]['sebelum']}",
-                        style: TextStyle(color: (siswa[i]['sesudah'] - siswa[i]['sebelum']) >= 0 ? Colors.green : Colors.red),
-                      ),
-                    ),
-                  ]),
-              ],
+            Expanded( // Tambahkan Expanded untuk tabel agar tidak overflow
+              child: SingleChildScrollView( // Tambahkan SingleChildScrollView jika tabel bisa sangat panjang
+                scrollDirection: Axis.vertical,
+                child: Table(
+                  border: TableBorder.all(),
+                  children: [
+                    const TableRow(children: [
+                      Padding(padding: EdgeInsets.all(8), child: Text("Siswa/Siswi")),
+                      Center(child: Text("Sebelum MBG")),
+                      Center(child: Text("Sesudah MBG")),
+                      Center(child: Text("Beda Nilai")),
+                    ]),
+                    if (siswa.isEmpty) // Tampilkan pesan jika tidak ada siswa
+                      const TableRow(children: [
+                        Padding(padding: EdgeInsets.all(8), child: Text("Tidak ada siswa terdaftar")),
+                        SizedBox(),
+                        SizedBox(),
+                        SizedBox(),
+                      ])
+                    else
+                      for (int i = 0; i < siswa.length; i++)
+                        TableRow(children: [
+                          Padding(padding: const EdgeInsets.all(8), child: Text(siswa[i]['nama'])),
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: TextFormField(
+                              initialValue: siswa[i]['sebelum'].toString(),
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                int newScore = int.tryParse(val) ?? 0;
+                                setState(() {
+                                  siswa[i]['sebelum'] = newScore;
+                                });
+                                _updateStudentEvaluation(siswa[i]['id'], newScore, siswa[i]['sesudah']);
+                              },
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: TextFormField(
+                              initialValue: siswa[i]['sesudah'].toString(),
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) {
+                                int newScore = int.tryParse(val) ?? 0;
+                                setState(() {
+                                  siswa[i]['sesudah'] = newScore;
+                                });
+                                _updateStudentEvaluation(siswa[i]['id'], siswa[i]['sebelum'], newScore);
+                              },
+                            ),
+                          ),
+                          Center(
+                            child: Text(
+                              "${siswa[i]['sesudah'] - siswa[i]['sebelum'] >= 0 ? '+' : ''}${siswa[i]['sesudah'] - siswa[i]['sebelum']}",
+                              style: TextStyle(color: (siswa[i]['sesudah'] - siswa[i]['sebelum']) >= 0 ? Colors.green : Colors.red),
+                            ),
+                          ),
+                        ]),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             const Text("Rata-Rata Nilai", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            if (siswa.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: Text(
-                  "Data kosong, menampilkan grafik dummy.",
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
             AspectRatio(
               aspectRatio: 1.5,
               child: BarChart(
                 BarChartData(
                   barGroups: siswa.isEmpty
-                      ? [
-                          BarChartGroupData(
-                            x: 0,
-                            barRods: [BarChartRodData(toY: 0.1, color: Colors.grey)],
-                          ),
-                          BarChartGroupData(
-                            x: 1,
-                            barRods: [BarChartRodData(toY: 0.1, color: Colors.grey)],
-                          ),
-                        ]
-                      : [
-                          BarChartGroupData(
-                            x: 0,
-                            barRods: [BarChartRodData(toY: safeAvgSebelum, color: Colors.blue)],
-                          ),
-                          BarChartGroupData(
-                            x: 1,
-                            barRods: [BarChartRodData(toY: safeAvgSesudah, color: Colors.blueAccent)],
-                          ),
-                        ],
+                      ? [ BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: 0.1, color: Colors.grey)]), BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: 0.1, color: Colors.grey)]), ]
+                      : [ BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: safeAvgSebelum, color: Colors.blue)]), BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: safeAvgSesudah, color: Colors.blueAccent)]), ],
                   titlesData: FlTitlesData(
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -257,7 +243,7 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  child: const Text("Kosongkan Data (Mock)"), // Hanya mengosongkan data di UI, tidak di Firestore
+                  child: const Text("Kosongkan Data (Mock)"),
                   onPressed: () {
                     setState(() {
                       siswa.clear();

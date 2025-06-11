@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'package:provider/provider.dart'; // Import Provider
+import '../../provider/user_provider.dart'; // Import UserProvider (jika perlu)
+
 class KateringDashboard extends StatefulWidget {
   const KateringDashboard({super.key});
 
@@ -13,6 +16,14 @@ class _KateringDashboardState extends State<KateringDashboard> {
   bool qualityChecked = false;
   bool isReady = false;
   final commentController = TextEditingController();
+
+  // Controllers untuk input menu baru
+  final portionsController = TextEditingController();
+  final carbController = TextEditingController();
+  final proteinController = TextEditingController();
+  final veggieController = TextEditingController();
+  final fruitController = TextEditingController();
+  final milkController = TextEditingController();
 
   Map<String, dynamic>? dailyMenu;
   String? dailyMenuDocId; // ID dokumen menu hari ini
@@ -26,19 +37,15 @@ class _KateringDashboardState extends State<KateringDashboard> {
   Future<void> _fetchDailyMenu() async {
     final now = DateTime.now();
     final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
-
-    // Ambil context ke variabel lokal
-    final currentContext = context;
+    final currentContext = context; // Capture context
 
     try {
-      // Ambil menu hari ini
       QuerySnapshot menuSnapshot = await FirebaseFirestore.instance
           .collection('foodMenus')
           .where('date', isEqualTo: todayFormatted)
           .limit(1)
           .get();
 
-      // Check mounted setelah await
       if (!currentContext.mounted) return;
 
       if (menuSnapshot.docs.isNotEmpty) {
@@ -48,26 +55,32 @@ class _KateringDashboardState extends State<KateringDashboard> {
           qualityChecked = dailyMenu?['qualityChecked'] ?? false;
           isReady = dailyMenu?['isReadyForDistribution'] ?? false;
           commentController.text = dailyMenu?['cateringComment'] ?? '';
+
+          // Isi controllers jika menu sudah ada
+          portionsController.text = dailyMenu?['portions']?.toString() ?? '';
+          carbController.text = dailyMenu?['carbohydrate'] ?? '';
+          proteinController.text = dailyMenu?['protein'] ?? '';
+          veggieController.text = dailyMenu?['vegetable'] ?? '';
+          fruitController.text = dailyMenu?['fruit'] ?? '';
+          milkController.text = dailyMenu?['milk'] ?? '';
         });
       } else {
-        // Jika belum ada menu hari ini, Tim Katering mungkin perlu menginputnya.
-        // Untuk demo cepat, kita bisa tampilkan pesan atau sediakan form input menu baru.
-        // Check mounted sebelum snackbar
-        if (currentContext.mounted) {
-          ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(content: Text("Belum ada menu yang diinput untuk hari ini."), backgroundColor: Colors.orange),
-          );
-        }
         setState(() {
           dailyMenu = null;
           dailyMenuDocId = null;
           qualityChecked = false;
           isReady = false;
           commentController.clear();
+          // Kosongkan controllers jika tidak ada menu
+          portionsController.clear();
+          carbController.clear();
+          proteinController.clear();
+          veggieController.clear();
+          fruitController.clear();
+          milkController.clear();
         });
       }
     } catch (e) {
-      // Check mounted di catch block
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(content: Text("Gagal memuat menu harian: $e"), backgroundColor: Colors.red),
@@ -77,42 +90,138 @@ class _KateringDashboardState extends State<KateringDashboard> {
   }
 
   // Fungsi untuk menyimpan/mengupdate status menu
-  Future<void> _updateMenuStatus() async {
-    // Ambil context ke variabel lokal
-    final currentContext = context;
+  Future<void> _saveOrUpdateDailyMenu() async {
+    final currentContext = context; // Capture context
+    final now = DateTime.now();
+    final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
 
-    if (dailyMenuDocId == null) {
-      // Check mounted sebelum snackbar
-      if (currentContext.mounted) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("Tidak ada menu yang aktif untuk diupdate."), backgroundColor: Colors.red),
-        );
-      }
+    if (portionsController.text.isEmpty ||
+        carbController.text.isEmpty ||
+        proteinController.text.isEmpty ||
+        veggieController.text.isEmpty ||
+        fruitController.text.isEmpty ||
+        milkController.text.isEmpty) {
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text("Harap isi semua detail menu!"), backgroundColor: Colors.red),
+      );
       return;
     }
 
     try {
-      await FirebaseFirestore.instance.collection('foodMenus').doc(dailyMenuDocId).update({
+      Map<String, dynamic> menuData = {
+        'date': todayFormatted,
+        'portions': int.tryParse(portionsController.text.trim()) ?? 0,
+        'carbohydrate': carbController.text.trim(),
+        'protein': proteinController.text.trim(),
+        'vegetable': veggieController.text.trim(),
+        'fruit': fruitController.text.trim(),
+        'milk': milkController.text.trim(),
         'qualityChecked': qualityChecked,
         'cateringComment': commentController.text.trim(),
         'isReadyForDistribution': isReady,
         'lastUpdatedByCatering': Timestamp.now(),
-      });
-      
-      // Check mounted setelah await
+      };
+
+      if (dailyMenuDocId != null) {
+        // Update menu yang sudah ada
+        await FirebaseFirestore.instance.collection('foodMenus').doc(dailyMenuDocId).update(menuData);
+      } else {
+        // Buat menu baru
+        DocumentReference newDocRef = await FirebaseFirestore.instance.collection('foodMenus').add(menuData);
+        setState(() {
+          dailyMenuDocId = newDocRef.id;
+        });
+      }
+
       if (!currentContext.mounted) return;
 
-      // Check mounted sebelum snackbar
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text("Menu berhasil disimpan/diperbarui!"), backgroundColor: Colors.green),
+      );
+      _fetchDailyMenu(); // Refresh data setelah simpan
+    } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("Status menu berhasil diperbarui!"), backgroundColor: Colors.green),
+          SnackBar(content: Text("Gagal menyimpan menu: $e"), backgroundColor: Colors.red),
         );
       }
-    } catch (e) {
-      // Check mounted di catch block
+    }
+  }
+
+  // Fungsi untuk menandai siap distribusi
+  Future<void> _markReadyForDistribution() async {
+    final currentContext = context; // Capture context
+    final now = DateTime.now();
+    final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
+
+    if (dailyMenuDocId == null) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(content: Text("Gagal memperbarui status menu: $e"), backgroundColor: Colors.red),
+          const SnackBar(content: Text("Harap input menu terlebih dahulu sebelum menandai siap."), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+    if (!qualityChecked || commentController.text.trim().isEmpty) {
+         if (currentContext.mounted) {
+           ScaffoldMessenger.of(currentContext).showSnackBar(
+             const SnackBar(content: Text("Harap lakukan Quality Check dan berikan komentar."), backgroundColor: Colors.red),
+           );
+         }
+         return;
+       }
+
+
+    try {
+      // Update status isReadyForDistribution di dokumen menu
+      await FirebaseFirestore.instance.collection('foodMenus').doc(dailyMenuDocId).update({
+        'isReadyForDistribution': true,
+        'lastUpdatedByCatering': Timestamp.now(),
+      });
+      if (!currentContext.mounted) return;
+      setState(() {
+        isReady = true;
+      });
+
+      // Buat atau update dokumen di foodDistributions
+      QuerySnapshot existingDist = await FirebaseFirestore.instance
+          .collection('foodDistributions')
+          .where('date', isEqualTo: todayFormatted)
+          .limit(1)
+          .get();
+
+      if (!currentContext.mounted) return;
+
+      if (existingDist.docs.isEmpty) {
+        // Buat entri baru jika belum ada
+        await FirebaseFirestore.instance.collection('foodDistributions').add({
+          'menuId': dailyMenuDocId,
+          'date': todayFormatted,
+          'totalPorsi': dailyMenu?['portions'], // Ambil dari dailyMenu state
+          'deliveryStatus': 'Pending', // Default status dari katering
+          'preparedByCatering': true,
+          'createdAt': Timestamp.now(),
+          'kelasVerified': '',
+          'jumlahHadirVerified': 0,
+          'issueReport': '',
+        });
+      } else {
+        // Update entri yang sudah ada
+        await FirebaseFirestore.instance.collection('foodDistributions').doc(existingDist.docs.first.id).update({
+          'deliveryStatus': 'Pending', // Reset ke pending jika di-mark ready lagi
+          'preparedByCatering': true,
+          'lastUpdatedByCatering': Timestamp.now(),
+        });
+      }
+
+      if (!currentContext.mounted) return;
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text("Makanan ditandai siap untuk didistribusikan!"), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal menandai siap distribusi: $e"), backgroundColor: Colors.red),
         );
       }
     }
@@ -143,37 +252,11 @@ class _KateringDashboardState extends State<KateringDashboard> {
             ),
             const Divider(height: 32),
 
-            const Text("Keterangan untuk menu hari ini :", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  "${dailyMenu?['portions'] ?? 'N/A'} porsi", // Tampilkan porsi dari Firestore
-                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Karbohidrat  : ${dailyMenu?['carbohydrate'] ?? 'N/A'}"),
-                  Text("Protein      : ${dailyMenu?['protein'] ?? 'N/A'}"),
-                  Text("Sayur        : ${dailyMenu?['vegetable'] ?? 'N/A'}"),
-                  Text("Buah         : ${dailyMenu?['fruit'] ?? 'N/A'}"),
-                  Text("Susu         : ${dailyMenu?['milk'] ?? 'N/A'}"),
-                ],
-              ),
-            ),
+            // Bagian Input Menu (jika belum ada menu hari ini)
+            if (dailyMenu == null)
+              _buildInputMenuForm()
+            else // Bagian Tampilan Menu (jika sudah ada menu hari ini)
+              _buildDisplayMenuDetails(),
 
             const SizedBox(height: 24),
             Row(
@@ -184,10 +267,12 @@ class _KateringDashboardState extends State<KateringDashboard> {
                     setState(() {
                       qualityChecked = val ?? false;
                       if (!qualityChecked) {
-                        isReady = false; // Jika quality un-checked, tidak siap
+                        isReady = false;
                       }
                     });
-                    _updateMenuStatus(); // Update status ke Firestore
+                    if (dailyMenuDocId != null) { // Hanya update status jika menu sudah ada
+                      _saveOrUpdateDailyMenu();
+                    }
                   },
                 ),
                 const Text("Quality Check"),
@@ -212,6 +297,9 @@ class _KateringDashboardState extends State<KateringDashboard> {
                 ),
                 onChanged: (_) {
                   setState(() {});
+                  if (dailyMenuDocId != null) { // Hanya update status jika menu sudah ada
+                    _saveOrUpdateDailyMenu();
+                  }
                 },
               ),
             ),
@@ -228,58 +316,8 @@ class _KateringDashboardState extends State<KateringDashboard> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: qualityChecked && commentController.text.trim().isNotEmpty && dailyMenuDocId != null
-                      ? () async {
-                          final currentContext = context; // Ambil context ke variabel lokal
-
-                          setState(() {
-                            isReady = true;
-                          });
-                          await _updateMenuStatus(); // Update status siap ke Firestore
-
-                          if (!currentContext.mounted) return; // Check mounted setelah await pertama
-
-                          try {
-                            final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
-                            QuerySnapshot existingDist = await FirebaseFirestore.instance
-                                .collection('foodDistributions')
-                                .where('date', isEqualTo: todayFormatted)
-                                .limit(1)
-                                .get();
-
-                            if (!currentContext.mounted) return; // Check mounted setelah await kedua
-
-                            if (existingDist.docs.isEmpty) {
-                              await FirebaseFirestore.instance.collection('foodDistributions').add({
-                                'menuId': dailyMenuDocId,
-                                'date': todayFormatted,
-                                'totalPorsi': dailyMenu?['portions'],
-                                'deliveryStatus': 'Pending', // Awalnya pending dari sisi katering
-                                'preparedByCatering': true,
-                                'createdAt': Timestamp.now(),
-                                'kelasVerified': '', // Kosongkan, akan diisi Admin
-                                'jumlahHadirVerified': 0, // Kosongkan, akan diisi Admin
-                                'issueReport': '', // Kosongkan
-                              });
-                            } else {
-                              await FirebaseFirestore.instance.collection('foodDistributions').doc(existingDist.docs.first.id).update({
-                                'deliveryStatus': 'Pending',
-                                'preparedByCatering': true,
-                                'lastUpdatedByCatering': Timestamp.now(),
-                              });
-                            }
-                            
-                            if (!currentContext.mounted) return; // Check mounted sebelum snackbar
-                            ScaffoldMessenger.of(currentContext).showSnackBar(
-                              const SnackBar(content: Text("Makanan ditandai siap untuk didistribusikan.")),
-                            );
-                          } catch (e) {
-                            if (!currentContext.mounted) return; // Check mounted di catch
-                            ScaffoldMessenger.of(currentContext).showSnackBar(
-                              SnackBar(content: Text("Gagal menandai siap distribusi: $e"), backgroundColor: Colors.red),
-                            );
-                          }
-                        }
+                  onPressed: dailyMenu != null && qualityChecked && commentController.text.trim().isNotEmpty
+                      ? _markReadyForDistribution
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isReady ? Colors.green : const Color(0xFF2962FF),
@@ -313,6 +351,93 @@ class _KateringDashboardState extends State<KateringDashboard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInputMenuForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Input Menu Harian", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        _buildInputField("Jumlah Porsi", portionsController, keyboardType: TextInputType.number),
+        _buildInputField("Karbohidrat", carbController),
+        _buildInputField("Protein", proteinController),
+        _buildInputField("Sayur", veggieController),
+        _buildInputField("Buah", fruitController),
+        _buildInputField("Susu", milkController),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _saveOrUpdateDailyMenu,
+          child: const Text("Simpan Menu"),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildDisplayMenuDetails() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Detail Menu Hari Ini", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              "${dailyMenu?['portions'] ?? 'N/A'} porsi",
+              style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Karbohidrat  : ${dailyMenu?['carbohydrate'] ?? 'N/A'}"),
+              Text("Protein      : ${dailyMenu?['protein'] ?? 'N/A'}"),
+              Text("Sayur        : ${dailyMenu?['vegetable'] ?? 'N/A'}"),
+              Text("Buah         : ${dailyMenu?['fruit'] ?? 'N/A'}"),
+              Text("Susu         : ${dailyMenu?['milk'] ?? 'N/A'}"),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+         ElevatedButton(
+          onPressed: _saveOrUpdateDailyMenu, // Tombol untuk update jika ada perubahan
+          child: const Text("Update Menu"),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildInputField(String label, TextEditingController controller, {TextInputType keyboardType = TextInputType.text}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              hintText: "Masukkan",
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
       ),
     );
   }
