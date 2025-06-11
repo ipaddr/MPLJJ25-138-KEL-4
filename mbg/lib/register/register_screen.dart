@@ -57,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (step == 1) ...[
               _buildField("Nama Lengkap", "Isi nama lengkap", fullNameController),
               _buildField("Email", "your@email.com", emailController),
-              _buildField("No. Handphone", "(+62) 1234-5678-9012", phoneController),
+              _buildField("No. Handphone", "012345678901", phoneController),
               _buildField("Asal Sekolah", "Isi nama sekolah", schoolController),
               const SizedBox(height: 32),
               _buildPrimaryButton("Selanjutnya", () => setState(() => step = 2)),
