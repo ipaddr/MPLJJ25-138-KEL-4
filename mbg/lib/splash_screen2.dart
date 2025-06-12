@@ -19,7 +19,7 @@ class SplashScreen2 extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Image.asset(
-                'assets/images/prabowo_gibran.png', // Ganti dengan nama file kamu
+                'assets/images/prabowo_gibran.png',
                 width: 180,
               ),
             ),
@@ -37,7 +37,6 @@ class SplashScreen2 extends StatelessWidget {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              // Pindahkan 'child' ke akhir
               child: const Text("Selanjutnya"),
             ),
           ],

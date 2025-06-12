@@ -13,8 +13,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
   bool qualityChecked = false;
   bool isReady = false;
   final commentController = TextEditingController();
-
-  // Controllers untuk input menu baru
   final portionsController = TextEditingController();
   final carbController = TextEditingController();
   final proteinController = TextEditingController();
@@ -23,7 +21,7 @@ class _KateringDashboardState extends State<KateringDashboard> {
   final milkController = TextEditingController();
 
   Map<String, dynamic>? dailyMenu;
-  String? dailyMenuDocId; // ID dokumen menu hari ini
+  String? dailyMenuDocId;
 
   @override
   void initState() {
@@ -34,7 +32,7 @@ class _KateringDashboardState extends State<KateringDashboard> {
   Future<void> _fetchDailyMenu() async {
     final now = DateTime.now();
     final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
-    final currentContext = context; // Capture context
+    final currentContext = context;
 
     try {
       QuerySnapshot menuSnapshot =
@@ -54,7 +52,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
           isReady = dailyMenu?['isReadyForDistribution'] ?? false;
           commentController.text = dailyMenu?['cateringComment'] ?? '';
 
-          // Isi controllers jika menu sudah ada
           portionsController.text = dailyMenu?['portions']?.toString() ?? '';
           carbController.text = dailyMenu?['carbohydrate'] ?? '';
           proteinController.text = dailyMenu?['protein'] ?? '';
@@ -69,7 +66,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
           qualityChecked = false;
           isReady = false;
           commentController.clear();
-          // Kosongkan controllers jika tidak ada menu
           portionsController.clear();
           carbController.clear();
           proteinController.clear();
@@ -90,9 +86,8 @@ class _KateringDashboardState extends State<KateringDashboard> {
     }
   }
 
-  // Fungsi untuk menyimpan/mengupdate status menu
   Future<void> _saveOrUpdateDailyMenu() async {
-    final currentContext = context; // Capture context
+    final currentContext = context;
     final now = DateTime.now();
     final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
 
@@ -127,13 +122,11 @@ class _KateringDashboardState extends State<KateringDashboard> {
       };
 
       if (dailyMenuDocId != null) {
-        // Update menu yang sudah ada
         await FirebaseFirestore.instance
             .collection('foodMenus')
             .doc(dailyMenuDocId)
             .update(menuData);
       } else {
-        // Buat menu baru
         DocumentReference newDocRef = await FirebaseFirestore.instance
             .collection('foodMenus')
             .add(menuData);
@@ -150,7 +143,7 @@ class _KateringDashboardState extends State<KateringDashboard> {
           backgroundColor: Colors.green,
         ),
       );
-      _fetchDailyMenu(); // Refresh data setelah simpan
+      _fetchDailyMenu();
     } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -163,9 +156,8 @@ class _KateringDashboardState extends State<KateringDashboard> {
     }
   }
 
-  // Fungsi untuk menandai siap distribusi
   Future<void> _markReadyForDistribution() async {
-    final currentContext = context; // Capture context
+    final currentContext = context;
     final now = DateTime.now();
     final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
 
@@ -195,7 +187,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
     }
 
     try {
-      // Update status isReadyForDistribution di dokumen menu
       await FirebaseFirestore.instance
           .collection('foodMenus')
           .doc(dailyMenuDocId)
@@ -208,7 +199,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
         isReady = true;
       });
 
-      // Buat atau update dokumen di foodDistributions
       QuerySnapshot existingDist =
           await FirebaseFirestore.instance
               .collection('foodDistributions')
@@ -219,12 +209,11 @@ class _KateringDashboardState extends State<KateringDashboard> {
       if (!currentContext.mounted) return;
 
       if (existingDist.docs.isEmpty) {
-        // Buat entri baru jika belum ada
         await FirebaseFirestore.instance.collection('foodDistributions').add({
           'menuId': dailyMenuDocId,
           'date': todayFormatted,
-          'totalPorsi': dailyMenu?['portions'], // Ambil dari dailyMenu state
-          'deliveryStatus': 'Pending', // Default status dari katering
+          'totalPorsi': dailyMenu?['portions'],
+          'deliveryStatus': 'Pending',
           'preparedByCatering': true,
           'createdAt': Timestamp.now(),
           'kelasVerified': '',
@@ -232,13 +221,12 @@ class _KateringDashboardState extends State<KateringDashboard> {
           'issueReport': '',
         });
       } else {
-        // Update entri yang sudah ada
         await FirebaseFirestore.instance
             .collection('foodDistributions')
             .doc(existingDist.docs.first.id)
             .update({
               'deliveryStatus':
-                  'Pending', // Reset ke pending jika di-mark ready lagi
+                  'Pending',
               'preparedByCatering': true,
               'lastUpdatedByCatering': Timestamp.now(),
             });
@@ -294,10 +282,9 @@ class _KateringDashboardState extends State<KateringDashboard> {
             ),
             const Divider(height: 32),
 
-            // Bagian Input Menu (jika belum ada menu hari ini)
             if (dailyMenu == null)
               _buildInputMenuForm()
-            else // Bagian Tampilan Menu (jika sudah ada menu hari ini)
+            else
               _buildDisplayMenuDetails(),
 
             const SizedBox(height: 24),
@@ -313,7 +300,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
                       }
                     });
                     if (dailyMenuDocId != null) {
-                      // Hanya update status jika menu sudah ada
                       _saveOrUpdateDailyMenu();
                     }
                   },
@@ -344,7 +330,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
                 onChanged: (_) {
                   setState(() {});
                   if (dailyMenuDocId != null) {
-                    // Hanya update status jika menu sudah ada
                     _saveOrUpdateDailyMenu();
                   }
                 },
@@ -480,7 +465,7 @@ class _KateringDashboardState extends State<KateringDashboard> {
         const SizedBox(height: 16),
         ElevatedButton(
           onPressed:
-              _saveOrUpdateDailyMenu, // Tombol untuk update jika ada perubahan
+              _saveOrUpdateDailyMenu,
           child: const Text("Update Menu"),
         ),
       ],

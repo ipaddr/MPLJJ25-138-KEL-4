@@ -1,10 +1,9 @@
-// lib/screens/guru/rekap_mingguan_page.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Perlu diimport lagi
-import 'package:provider/provider.dart'; // Perlu diimport lagi
-import '../../provider/user_provider.dart'; // Perlu diimport lagi
-import 'package:intl/intl.dart'; // Perlu diimport untuk DateFormat
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../provider/user_provider.dart';
+import 'package:intl/intl.dart';
 
 class RekapMingguanPage extends StatefulWidget {
   const RekapMingguanPage({super.key});
@@ -14,7 +13,6 @@ class RekapMingguanPage extends StatefulWidget {
 }
 
 class _RekapMingguanPageState extends State<RekapMingguanPage> {
-  // Data aktual yang akan diisi dari Firestore
   List<double> actualNilaiHarian = [];
   List<String> hariMingguIni = [];
 
@@ -25,7 +23,7 @@ class _RekapMingguanPageState extends State<RekapMingguanPage> {
   }
 
   Future<void> _fetchWeeklyEvaluationData() async {
-    final currentContext = context; // Capture context
+    final currentContext = context;
 
     final userProvider = Provider.of<UserProvider>(
       currentContext,
@@ -49,23 +47,21 @@ class _RekapMingguanPageState extends State<RekapMingguanPage> {
       final now = DateTime.now();
       final startOfWeek = now.subtract(
         Duration(days: now.weekday - 1),
-      ); // Senin minggu ini
+      );
       final endOfWeek = startOfWeek.add(
         const Duration(days: 6),
-      ); // Minggu minggu ini
+      );
 
-      Map<String, List<int>> dailyScores = {}; // Untuk menyimpan skor per hari
+      Map<String, List<int>> dailyScores = {};
       List<String> tempHariMingguIni = [];
       List<double> tempNilaiHarian = [];
-
-      // Inisialisasi hari-hari dalam seminggu dan skor dengan 0
       for (int i = 0; i < 7; i++) {
         final date = startOfWeek.add(Duration(days: i));
         final formattedDate = DateFormat('yyyy-MM-dd').format(date);
         final dayName = DateFormat(
           'EEE',
           'id_ID',
-        ).format(date); // Nama hari singkat
+        ).format(date);
         tempHariMingguIni.add(dayName);
         dailyScores[formattedDate] = [];
       }
@@ -85,19 +81,15 @@ class _RekapMingguanPageState extends State<RekapMingguanPage> {
               .get();
 
       if (!currentContext.mounted) return;
-
-      // Mengumpulkan skor dari Firestore
       for (var doc in evaluationSnapshot.docs) {
         var evalData = doc.data() as Map<String, dynamic>;
         Timestamp timestamp = evalData['evaluationDate'] as Timestamp;
         DateTime date = timestamp.toDate();
         String formattedDate = DateFormat('yyyy-MM-dd').format(date);
-        int score = evalData['afterMbgScore'] ?? 0; // Ambil nilai setelah makan
+        int score = evalData['afterMbgScore'] ?? 0;
 
         dailyScores[formattedDate]?.add(score);
       }
-
-      // Menghitung rata-rata skor per hari
       for (int i = 0; i < 7; i++) {
         final date = startOfWeek.add(Duration(days: i));
         final formattedDate = DateFormat('yyyy-MM-dd').format(date);
@@ -130,7 +122,6 @@ class _RekapMingguanPageState extends State<RekapMingguanPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Rekap Evaluasi Mingguan")),
       body: SingleChildScrollView(
-        // Bungkus seluruh Padding dengan SingleChildScrollView
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -174,11 +165,9 @@ class _RekapMingguanPageState extends State<RekapMingguanPage> {
                   ),
                 ),
               ),
-              // Hapus Spacer() jika SingleChildScrollView sudah membungkus keseluruhan body
-              // const Spacer(),
               const SizedBox(
                 height: 20,
-              ), // Tambahkan sedikit jarak di sini sebagai ganti Spacer
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

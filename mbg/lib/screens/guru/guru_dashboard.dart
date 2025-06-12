@@ -1,11 +1,10 @@
-// lib/screens/guru/guru_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io'; // Tetap butuh ini untuk mobile/desktop
-import 'package:flutter/foundation.dart' show kIsWeb; // Tambahkan ini!
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../provider/user_provider.dart';
 
@@ -32,7 +31,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
   }
 
   Future<void> _fetchGuruProfile() async {
-    final currentContext = context; // Capture context here
+    final currentContext = context;
 
     final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
     if (userProvider.uid != null) {
@@ -45,7 +44,6 @@ class _GuruDashboardState extends State<GuruDashboard> {
           setState(() {
             guruName = userDoc.get('fullName') ?? "Nama Guru";
             guruRoleDisplay = userDoc.get('role') ?? "Guru";
-            // Ambil profilePictureUrl dengan aman
             profileImageUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?; 
           });
         }
@@ -60,15 +58,14 @@ class _GuruDashboardState extends State<GuruDashboard> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    final currentContext = context; // Capture context here
+    final currentContext = context;
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    if (!currentContext.mounted) return; // Check mounted after first await
+    if (!currentContext.mounted) return;
 
     if (pickedFile != null) {
-      // Ambil userProvider dan UID setelah memastikan context masih mounted
       final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
       String? uid = userProvider.uid;
 
@@ -86,35 +83,27 @@ class _GuruDashboardState extends State<GuruDashboard> {
         Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
         if (kIsWeb) {
-          // Logika untuk platform web (browser)
-          // Di web, image_picker mengembalikan XFile tanpa path yang bisa digunakan oleh dart:io.File.
-          // Kita perlu membaca konten file sebagai bytes.
           final bytes = await pickedFile.readAsBytes();
-          await storageRef.putData(bytes); // Upload bytes
+          await storageRef.putData(bytes);
         } else {
-          // Logika untuk platform mobile (Android/iOS) atau desktop
-          // Di platform native, XFile memiliki path yang bisa digunakan untuk membuat File object.
-          // Menghapus '!' karena path dijamin ada di sini.
           File imageFile = File(pickedFile.path); 
-          await storageRef.putFile(imageFile); // Upload File
+          await storageRef.putFile(imageFile);
         }
 
         String downloadUrl = await storageRef.getDownloadURL();
 
-        if (!currentContext.mounted) return; // Check mounted after Firebase Storage operations
+        if (!currentContext.mounted) return;
 
-        // Update URL di Firestore user document
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'profilePictureUrl': downloadUrl,
         });
 
-        if (!currentContext.mounted) return; // Check mounted before setState and UI operations
+        if (!currentContext.mounted) return;
 
-        // Update state dan UserProvider
         setState(() {
           profileImageUrl = downloadUrl;
         });
-        userProvider.updateProfilePictureUrl(downloadUrl); // Update di provider
+        userProvider.updateProfilePictureUrl(downloadUrl);
         ScaffoldMessenger.of(currentContext).showSnackBar(
           const SnackBar(content: Text("Foto profil berhasil diunggah!"), backgroundColor: Colors.green),
         );
@@ -128,7 +117,6 @@ class _GuruDashboardState extends State<GuruDashboard> {
     }
   }
 
-  // PENTING: Pindahkan method helper ini ke luar method build, di dalam class _GuruDashboardState
   Widget _buildMenuItem(
     BuildContext context, {
     required String title,

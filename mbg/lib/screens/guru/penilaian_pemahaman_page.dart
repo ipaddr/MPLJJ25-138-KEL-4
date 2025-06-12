@@ -19,8 +19,8 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
 
   String komentar = "";
 
-  List<Map<String, dynamic>> students = []; // Daftar siswa dari Firestore
-  String? selectedStudentId; // ID siswa yang dipilih
+  List<Map<String, dynamic>> students = [];
+  String? selectedStudentId;
 
   @override
   void initState() {
@@ -31,7 +31,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
   Future<void> _fetchStudents() async {
     try {
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
-      // Check mounted after await
       if (!mounted) return;
 
       setState(() {
@@ -40,11 +39,10 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
           'nama': doc.get('nama') ?? 'Nama Tidak Diketahui',
         }).toList();
         if (students.isNotEmpty) {
-          selectedStudentId = students.first['id']; // Pilih siswa pertama secara default
+          selectedStudentId = students.first['id'];
         }
       });
     } catch (e) {
-      // Check mounted in catch block
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal memuat daftar siswa: $e"), backgroundColor: Colors.red),
@@ -63,8 +61,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
           children: [
             const Text("Penilaian Kinerja Harian", style: TextStyle(fontSize: 16)),
             const SizedBox(height: 12),
-
-            // Dropdown untuk memilih siswa
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(
                 labelText: 'Pilih Siswa',
@@ -84,9 +80,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
               },
             ),
             const SizedBox(height: 20),
-
-            // Ini adalah Children dari Column. Pastikan kurung kurawal penutupnya benar.
-            // Hapus .toList() yang tidak perlu jika ada.
             ...nilai.keys.map((kriteria) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +103,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                   const SizedBox(height: 12),
                 ],
               );
-            }), // .toList() Dihapus di sini
+            }),
 
             const Text("Pengamatan guru", style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
@@ -169,7 +162,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                       setState(() {
                         nilai.forEach((key, value) => nilai[key] = 0);
                         komentar = "";
-                        // Perbarui daftar siswa setelah menyimpan
                         students.removeWhere((s) => s['id'] == selectedStudentId);
                         selectedStudentId = students.isNotEmpty ? students.first['id'] : null;
                       });

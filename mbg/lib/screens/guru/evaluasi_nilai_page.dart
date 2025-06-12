@@ -12,7 +12,7 @@ class EvaluasiNilaiPage extends StatefulWidget {
 }
 
 class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
-  List<Map<String, dynamic>> siswa = []; // Ini akan diisi dari Firestore
+  List<Map<String, dynamic>> siswa = [];
 
   @override
   void initState() {
@@ -22,19 +22,15 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
 
   Future<void> _fetchStudentsAndEvaluations() async {
     try {
-      // Ambil semua siswa (Admin Sekolah menginput siswa)
       QuerySnapshot studentSnapshot =
           await FirebaseFirestore.instance.collection('students').get();
-      // Check mounted after first await
-      if (!mounted) return; //
+      if (!mounted) return; 
 
       List<Map<String, dynamic>> fetchedSiswa = [];
 
       for (var doc in studentSnapshot.docs) {
         String studentId = doc.id;
         String studentName = doc.get('nama') ?? 'Nama Tidak Diketahui';
-
-        // Ambil evaluasi akademik untuk siswa ini
         QuerySnapshot evaluationSnapshot =
             await FirebaseFirestore.instance
                 .collection('academicEvaluations')
@@ -42,12 +38,11 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
                 .orderBy(
                   'evaluationDate',
                   descending: true,
-                ) // Ambil yang terbaru
+                ) 
                 .limit(1)
                 .get();
 
-        // Check mounted after each evaluation fetch inside loop
-        if (!mounted) return; //
+        if (!mounted) return; 
 
         int beforeScore = 0;
         int afterScore = 0;
@@ -67,14 +62,12 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
         });
       }
 
-      // Check mounted before setState
-      if (!mounted) return; //
+      if (!mounted) return; 
       setState(() {
         siswa = fetchedSiswa;
       });
     } catch (e) {
-      // Check mounted in catch block
-      if (!mounted) return; //
+      if (!mounted) return; 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Gagal memuat data siswa dan evaluasi: $e"),
@@ -102,13 +95,12 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
     return total / valid.length;
   }
 
-  // Fungsi untuk update nilai ke Firestore
   Future<void> _updateStudentEvaluation(
     String studentId,
     int newBeforeScore,
     int newAfterScore,
   ) async {
-    final currentContext = context; // Ambil context ke variabel lokal
+    final currentContext = context;
 
     try {
       final userProvider = Provider.of<UserProvider>(
@@ -177,7 +169,6 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Evaluasi Nilai Akademik")),
       body: SingleChildScrollView(
-        // Bungkus seluruh Padding dengan SingleChildScrollView
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -188,13 +179,7 @@ class _EvaluasiNilaiPageState extends State<EvaluasiNilaiPage> {
                 style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 12),
-              // Hapus Expanded di sini karena SingleChildScrollView sudah di atas
-              // child: SingleChildScrollView( // Ini akan ada di dalam SingleChildScrollView utama
-              // scrollDirection: Axis.vertical,
-              // child: Table(...),
-              // ),
               Table(
-                // Tidak perlu Expanded jika SingleChildScrollView membungkus keseluruhan body
                 border: TableBorder.all(),
                 children: [
                   const TableRow(

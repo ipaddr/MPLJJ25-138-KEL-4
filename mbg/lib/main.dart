@@ -9,8 +9,8 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp( // Tambahkan ini
-    options: DefaultFirebaseOptions.currentPlatform, // Tambahkan ini
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
   await initializeDateFormatting('id_ID', null);
 
