@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
@@ -33,18 +34,55 @@ class ForgotPasswordScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                final email = emailController.text;
+              onPressed: () async {
+                // Simpan context ke variabel lokal untuk digunakan di seluruh async gap
+                final currentContext = context; 
+
+                final email = emailController.text.trim();
                 if (email.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Link reset dikirim ke $email'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  // Tambahkan logika untuk mengirim email reset password di sini
+                  try {
+                    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                    
+                    // Setelah await, cek apakah widget masih ada
+                    if (!currentContext.mounted) return; 
+
+                    ScaffoldMessenger.of(currentContext).showSnackBar(
+                      SnackBar(
+                        content: Text('Link reset dikirim ke $email. Silakan cek email Anda.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } on FirebaseAuthException catch (e) {
+                    String message;
+                    if (e.code == 'user-not-found') {
+                      message = 'Tidak ada pengguna dengan email tersebut.';
+                    } else {
+                      message = 'Gagal mengirim link reset: ${e.message}';
+                    }
+                    
+                    // Setelah await (catch), cek apakah widget masih ada
+                    if (!currentContext.mounted) return;
+
+                    ScaffoldMessenger.of(currentContext).showSnackBar(
+                      SnackBar(
+                        content: Text(message),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } catch (e) {
+                    // Setelah await (catch), cek apakah widget masih ada
+                    if (!currentContext.mounted) return;
+
+                    ScaffoldMessenger.of(currentContext).showSnackBar(
+                      SnackBar(
+                        content: Text('Terjadi kesalahan tidak terduga: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  // Bagian ini sinkronus, context selalu valid
+                  ScaffoldMessenger.of(currentContext).showSnackBar(
                     const SnackBar(
                       content: Text('Email tidak boleh kosong!'),
                       backgroundColor: Colors.red,

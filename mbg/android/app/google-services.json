@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "985024552380",
+    "project_id": "makangizigratisapp",
+    "storage_bucket": "makangizigratisapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:985024552380:android:9c6f49c070cd5a5ae35fb9",
+        "android_client_info": {
+          "package_name": "com.example.mbg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxaEJSvAZTcGn3Du_tWkDTJ0desdILwo4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
