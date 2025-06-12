@@ -44,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),
-
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
@@ -53,7 +52,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 TextField(
                   controller: passwordController,
                   obscureText: true,
@@ -63,7 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Pilih Role',
@@ -83,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -99,13 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
                       if (selectedRole == null) {
-                        // Di sini context selalu valid
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Pilih role terlebih dahulu!'),
@@ -115,8 +109,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         return;
                       }
 
-                      // Simpan context ke variabel lokal sebelum await pertama
-                      // agar linter tidak khawatir dengan 'BuildContexts across async gaps'
                       final currentContext = context;
 
                       try {
@@ -125,7 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           password: passwordController.text.trim(),
                         );
 
-                        // Gunakan currentContext.mounted untuk check
                         if (!currentContext.mounted) return;
 
                         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
@@ -134,22 +125,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         if (userDoc.exists) {
                           String? storedRole = userDoc.get('role');
+                          String? profileUrl = userDoc.get('profilePictureUrl'); // Ambil URL foto profil
 
                           if (storedRole == selectedRole) {
-                            Provider.of<UserProvider>(currentContext, listen: false) // Gunakan currentContext
-                                .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!);
+                            Provider.of<UserProvider>(currentContext, listen: false)
+                                .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!, profilePictureUrl: profileUrl); // Setel URL foto profil
 
-                            if (!currentContext.mounted) return; // Cek sebelum navigasi
+                            if (!currentContext.mounted) return;
                             Navigator.pushReplacement(
-                              currentContext, // Gunakan currentContext
+                              currentContext,
                               MaterialPageRoute(
                                 builder: (context) => const MainScreen(),
                               ),
                             );
                           } else {
                             await FirebaseAuth.instance.signOut();
-                            if (!currentContext.mounted) return; // Cek sebelum snackbar
-                            ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                            if (!currentContext.mounted) return;
+                            ScaffoldMessenger.of(currentContext).showSnackBar(
                               const SnackBar(
                                 content: Text('Role yang Anda pilih tidak cocok dengan akun ini.'),
                                 backgroundColor: Colors.red,
@@ -158,8 +150,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         } else {
                           await FirebaseAuth.instance.signOut();
-                          if (!currentContext.mounted) return; // Cek sebelum snackbar
-                          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                          if (!currentContext.mounted) return;
+                          ScaffoldMessenger.of(currentContext).showSnackBar(
                             const SnackBar(
                               content: Text('Data pengguna tidak ditemukan. Silakan hubungi admin.'),
                               backgroundColor: Colors.red,
@@ -177,13 +169,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         } else {
                           message = 'Terjadi kesalahan saat login: ${e.message}';
                         }
-                        if (!currentContext.mounted) return; // Cek sebelum snackbar
-                        ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                        if (!currentContext.mounted) return;
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
                           SnackBar(content: Text(message), backgroundColor: Colors.red),
                         );
                       } catch (e) {
-                        if (!currentContext.mounted) return; // Cek sebelum snackbar
-                        ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+                        if (!currentContext.mounted) return;
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
                           SnackBar(content: Text('Terjadi kesalahan tidak terduga: $e'), backgroundColor: Colors.red),
                         );
                       }
@@ -192,10 +184,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 GestureDetector(
                   onTap: () {
-                    // Ini adalah callback sinkronus, jadi tidak perlu mounted check
                     Navigator.push(
                       context,
                       MaterialPageRoute(

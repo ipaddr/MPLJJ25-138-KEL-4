@@ -1,14 +1,16 @@
-// lib/screens/admin/admin_dashboard.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Import Provider
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-import '../../provider/user_provider.dart'; // Import UserProvider
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../../provider/user_provider.dart';
 
 import 'input_data_siswa_page.dart';
 import 'distribusi_makanan_page.dart';
 import 'laporan_konsumsi_page.dart';
 
-class AdminDashboard extends StatefulWidget { // Ubah menjadi StatefulWidget
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
   @override
@@ -16,9 +18,10 @@ class AdminDashboard extends StatefulWidget { // Ubah menjadi StatefulWidget
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  String adminName = "Admin Sekolah"; // Default value
-  String schoolName = "Nama Sekolah Anda"; // Default value
-  bool isSchoolVerified = false; // Status verifikasi
+  String adminName = "Admin Sekolah";
+  String schoolName = "Nama Sekolah Anda";
+  bool isSchoolVerified = false;
+  String? profileImageUrl;
 
   @override
   void initState() {
@@ -27,22 +30,29 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _fetchAdminProfile() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    // Tangkap context ke variabel lokal untuk digunakan setelah async operation
+    final currentContext = context; 
+
+    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
     if (userProvider.uid != null) {
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userProvider.uid).get();
-        if (!mounted) return; // Check mounted
+        
+        // Pastikan widget masih mounted sebelum menggunakan currentContext
+        if (!currentContext.mounted) return;
 
         if (userDoc.exists) {
           setState(() {
             adminName = userDoc.get('fullName') ?? "Admin Sekolah";
             schoolName = userDoc.get('schoolName') ?? "Nama Sekolah Anda";
-            isSchoolVerified = userDoc.get('isSchoolVerified') ?? false; // Ambil status verifikasi
+            isSchoolVerified = userDoc.get('isSchoolVerified') ?? false;
+            profileImageUrl = userDoc.get('profilePictureUrl');
           });
         }
       } catch (e) {
-        if (mounted) { // Check mounted
-          ScaffoldMessenger.of(context).showSnackBar(
+        // Pastikan widget masih mounted sebelum menampilkan SnackBar
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
             SnackBar(content: Text("Gagal memuat profil admin: $e"), backgroundColor: Colors.red),
           );
         }
@@ -50,26 +60,90 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  Future<void> _pickAndUploadImage() async {
+    // Tangkap BuildContext ke variabel lokal sebelum await pertama
+    final currentContext = context; 
+
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    // Setelah await pertama, selalu cek mounted
+    if (!currentContext.mounted) return;
+
+    if (pickedFile != null) {
+      File imageFile = File(pickedFile.path);
+      // Gunakan currentContext untuk Provider.of
+      final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
+      String? uid = userProvider.uid;
+
+      if (uid == null) {
+        if (currentContext.mounted) { // Gunakan currentContext
+          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+            const SnackBar(content: Text("Pengguna tidak terautentikasi."), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+
+      try {
+        String fileName = 'profile_pictures/$uid.jpg';
+        UploadTask uploadTask = FirebaseStorage.instance.ref().child(fileName).putFile(imageFile);
+        TaskSnapshot snapshot = await uploadTask;
+        String downloadUrl = await snapshot.ref.getDownloadURL();
+
+        // Setelah await, cek mounted lagi
+        if (!currentContext.mounted) return;
+
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'profilePictureUrl': downloadUrl,
+        });
+
+        // Setelah await, cek mounted lagi
+        if (!currentContext.mounted) return;
+
+        setState(() {
+          profileImageUrl = downloadUrl;
+        });
+        userProvider.updateProfilePictureUrl(downloadUrl);
+        // Gunakan currentContext untuk ScaffoldMessenger
+        ScaffoldMessenger.of(currentContext).showSnackBar( 
+          const SnackBar(content: Text("Foto profil berhasil diunggah!"), backgroundColor: Colors.green),
+        );
+      } catch (e) {
+        // Gunakan currentContext di catch block
+        if (currentContext.mounted) { 
+          ScaffoldMessenger.of(currentContext).showSnackBar( 
+            SnackBar(content: Text("Gagal mengunggah foto: $e"), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _verifySchool() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    // Tangkap context ke variabel lokal untuk digunakan setelah async operation
+    final currentContext = context;
+
+    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
     if (userProvider.uid != null) {
       try {
         await FirebaseFirestore.instance.collection('users').doc(userProvider.uid).update({
           'isSchoolVerified': true,
           'verifiedAt': Timestamp.now(),
         });
-        if (!mounted) return; // Check mounted
+        // Pastikan widget masih mounted sebelum melanjutkan atau setState
+        if (!currentContext.mounted) return; 
         setState(() {
           isSchoolVerified = true;
         });
-        if (mounted) { // Check mounted
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (currentContext.mounted) { // Gunakan currentContext
+          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
             const SnackBar(content: Text("Sekolah berhasil diverifikasi!"), backgroundColor: Colors.green),
           );
         }
       } catch (e) {
-        if (mounted) { // Check mounted
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (currentContext.mounted) { // Gunakan currentContext
+          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
             SnackBar(content: Text("Gagal memverifikasi sekolah: $e"), backgroundColor: Colors.red),
           );
         }
@@ -79,17 +153,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context);
+    final currentProfileImage = userProvider.profilePictureUrl;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Profile Row
           Row(
             children: [
-              const CircleAvatar(
-                radius: 30,
-                backgroundImage: AssetImage('assets/images/foto.png'),
+              GestureDetector(
+                onTap: _pickAndUploadImage,
+                child: CircleAvatar(
+                  radius: 30,
+                  backgroundImage: currentProfileImage != null && currentProfileImage.isNotEmpty
+                      ? NetworkImage(currentProfileImage) as ImageProvider
+                      : const AssetImage('assets/images/foto.png'),
+                ),
               ),
               const SizedBox(width: 12),
               Column(
@@ -103,18 +184,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const Icon(Icons.notifications_none),
             ],
           ),
-
           const SizedBox(height: 20),
-
-          // Verifikasi Sekolah
           const Text("Verifikasi Sekolah", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: TextField(
-                  readOnly: true, // Tidak perlu diedit, hanya tampilkan
-                  controller: TextEditingController(text: schoolName), // Tampilkan nama sekolah
+                  readOnly: true,
+                  controller: TextEditingController(text: schoolName),
                   decoration: InputDecoration(
                     hintText: "Nama Sekolah",
                     border: OutlineInputBorder(
@@ -125,7 +203,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Tombol Verifikasi
               isSchoolVerified
                   ? Container(
                       padding: const EdgeInsets.all(10),
@@ -143,15 +220,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.warning, color: Colors.orange),
-                        onPressed: _verifySchool, // Panggil fungsi verifikasi
+                        onPressed: _verifySchool,
                       ),
                     ),
             ],
           ),
-
           const SizedBox(height: 24),
-
-          // Statistik (Ini masih dummy, perlu diupdate dari Firestore)
           const Text("Statistik", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
           Row(
@@ -162,10 +236,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               _buildStatItem(Icons.pie_chart, "Total konsumsi\n(Mingguan)", "5,521", Colors.purple),
             ],
           ),
-
           const SizedBox(height: 32),
-
-          // Menu
           const Text("Menu", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
           _buildMenuItem(context, Icons.school, "Input Data Siswa", "Kelola informasi siswa", Colors.blue.shade100, const InputDataSiswaPage()),
