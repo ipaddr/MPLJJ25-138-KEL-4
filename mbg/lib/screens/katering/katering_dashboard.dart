@@ -226,7 +226,7 @@ class _KateringDashboardState extends State<KateringDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateFormat("EEEE, d MMMM****", 'id_ID').format(DateTime.now());
+    final now = DateFormat("EEEE, d MMMM yyyy", 'id_ID').format(DateTime.now());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
