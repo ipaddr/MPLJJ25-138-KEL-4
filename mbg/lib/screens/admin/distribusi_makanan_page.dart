@@ -388,7 +388,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
   }
 
   Widget _buildVerifikasiMakanan() {
-    final now = DateFormat("EEEE, d MMMM****", 'id_ID').format(DateTime.now());
+    final now = DateFormat("EEEE, d MMMM yyyy", 'id_ID').format(DateTime.now());
 
     return SingleChildScrollView(
       child: Column(
@@ -622,7 +622,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
   }
 
   Widget _buildVerifikasiSiswa() {
-    final now = DateFormat("EEEE, d MMMMyyyy", 'id_ID').format(DateTime.now());
+    final now = DateFormat("EEEE, d MMMM yyyy", 'id_ID').format(DateTime.now());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
