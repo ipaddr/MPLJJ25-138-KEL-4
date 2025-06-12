@@ -75,14 +75,11 @@ class InputDataSiswaPage extends StatelessWidget {
                   context,
                   "Simpan",
                   onTap: () async {
-                    // Simpan context ke variabel lokal
                     final currentContext = context;
 
-                    // Validasi input dasar
                     if (namaController.text.isEmpty ||
                         kelasController.text.isEmpty ||
                         nisController.text.isEmpty) {
-                      // Gunakan currentContext
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -103,16 +100,13 @@ class InputDataSiswaPage extends StatelessWidget {
                         'createdAt': Timestamp.now(),
                       });
 
-                      // Setelah await, cek apakah context masih mounted
                       if (!currentContext.mounted) return;
 
-                      // Bersihkan input setelah berhasil disimpan
                       namaController.clear();
                       kelasController.clear();
                       nisController.clear();
                       keteranganController.clear();
 
-                      // Gunakan currentContext
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text("Data siswa berhasil disimpan!"),
@@ -120,10 +114,8 @@ class InputDataSiswaPage extends StatelessWidget {
                         ),
                       );
                     } catch (e) {
-                      // Di catch block, cek apakah context masih mounted
                       if (!currentContext.mounted) return;
 
-                      // Gunakan currentContext
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
                           content: Text("Gagal menyimpan data: $e"),
@@ -172,7 +164,7 @@ class InputDataSiswaPage extends StatelessWidget {
   }
 
   Widget _buildRoundedButton(
-    BuildContext context, // context parameter ini tetap valid di sini
+    BuildContext context,
     String text, {
     required VoidCallback onTap,
   }) {

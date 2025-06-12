@@ -46,7 +46,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             adminName = userDoc.get('fullName') ?? "Admin Sekolah";
             schoolName = userDoc.get('schoolName') ?? "Nama Sekolah Anda";
             isSchoolVerified = userDoc.get('isSchoolVerified') ?? false;
-            // PERBAIKAN: Ambil profilePictureUrl dengan aman
             profileImageUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?; 
           });
         }
@@ -89,7 +88,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           final bytes = await pickedFile.readAsBytes();
           await storageRef.putData(bytes); 
         } else {
-          File imageFile = File(pickedFile.path); // '!' dihapus karena path dijamin tidak null di sini
+          File imageFile = File(pickedFile.path);
           await storageRef.putFile(imageFile); 
         }
 
@@ -149,7 +148,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  // PENTING: Pindahkan method helper ini ke luar method build, di dalam class _AdminDashboardState
   Widget _buildStatItem(IconData icon, String label, String value, Color color) {
     return Column(
       children: [
@@ -166,7 +164,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  // PENTING: Pindahkan method helper ini ke luar method build, di dalam class _AdminDashboardState
   Widget _buildMenuItem(BuildContext context, IconData icon, String title, String subtitle, Color bgColor, Widget page) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),

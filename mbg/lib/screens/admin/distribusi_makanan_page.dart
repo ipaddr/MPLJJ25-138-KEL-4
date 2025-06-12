@@ -21,19 +21,19 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
   String deliveryStatus = "Pending";
 
   List<Map<String, dynamic>> listedStudents =
-      []; // Data siswa yang akan ditampilkan
+      [];
   Map<String, Map<String, bool>> studentConsumptionStatus =
-      {}; // {studentId: {'pagi': true, 'siang': false}}
+      {};
 
   @override
   void initState() {
     super.initState();
     _fetchDailyMenuAndDistribution();
-    _fetchStudentsForVerification(); // Panggil ini untuk mengambil data siswa
+    _fetchStudentsForVerification();
   }
 
   Future<void> _fetchStudentsForVerification() async {
-    final currentContext = context; // Capture context
+    final currentContext = context;
 
     try {
       QuerySnapshot studentSnapshot =
@@ -47,16 +47,15 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
         String studentId = doc.id;
         String studentName = doc.get('nama') ?? 'Nama Tidak Diketahui';
 
-        // Ambil status konsumsi untuk siswa ini dan hari ini
         final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
         DocumentSnapshot consumptionDoc =
             await FirebaseFirestore.instance
                 .collection(
                   'dailyConsumptions',
-                ) // Koleksi baru untuk menyimpan status konsumsi harian
+                )
                 .doc(
                   '${studentId}_$todayFormatted',
-                ) // ID Dokumen: studentId_tanggal
+                )
                 .get();
 
         if (!currentContext.mounted) return;
@@ -92,17 +91,15 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
     }
   }
 
-  // Fungsi untuk mengupdate status makan siswa
   Future<void> _updateStudentConsumption(
     String studentId,
     String mealType,
     bool status,
   ) async {
-    final currentContext = context; // Capture context
+    final currentContext = context;
     final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     try {
-      // Buat atau update dokumen di koleksi 'dailyConsumptions'
       await FirebaseFirestore.instance
           .collection('dailyConsumptions')
           .doc('${studentId}_$todayFormatted')
@@ -123,7 +120,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
             },
             SetOptions(
               merge: true,
-            ), // Gunakan merge agar tidak menimpa field lain jika ada
+            ),
           );
       if (!currentContext.mounted) return;
 
@@ -155,8 +152,6 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
   Future<void> _fetchDailyMenuAndDistribution() async {
     final now = DateTime.now();
     final todayFormatted = DateFormat('yyyy-MM-dd').format(now);
-
-    // Ambil context ke variabel lokal
     final currentContext = context;
 
     try {
@@ -167,7 +162,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
               .limit(1)
               .get();
 
-      if (!currentContext.mounted) return; // Check mounted after first await
+      if (!currentContext.mounted) return;
 
       if (menuSnapshot.docs.isNotEmpty) {
         setState(() {
@@ -177,7 +172,6 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
         setState(() {
           currentMenu = null;
         });
-        // Check mounted before using ScaffoldMessenger
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(
@@ -197,7 +191,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
               .limit(1)
               .get();
 
-      if (!currentContext.mounted) return; // Check mounted after second await
+      if (!currentContext.mounted) return;
 
       if (distSnapshot.docs.isNotEmpty) {
         setState(() {
@@ -217,7 +211,6 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
         });
       }
     } catch (e) {
-      // Check mounted before using ScaffoldMessenger in catch block
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(
@@ -229,14 +222,11 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
     }
   }
 
-  // Lokasi: di dalam class _DistribusiMakananPageState
   void _showReportIssueDialog(BuildContext dialogContext) {
-    // Gunakan nama berbeda untuk context di dalam dialog
     final TextEditingController issueController = TextEditingController();
     showDialog(
-      context: dialogContext, // Gunakan dialogContext di sini
+      context: dialogContext,
       builder: (context) {
-        // context di sini adalah context internal builder, selalu valid saat builder dipanggil
         return AlertDialog(
           title: const Text("Laporan Masalah"),
           content: TextField(
@@ -250,13 +240,13 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
           actions: [
             TextButton(
               onPressed:
-                  () => Navigator.pop(context), // context di sini masih valid
+                  () => Navigator.pop(context),
               child: const Text("Batal"),
             ),
             ElevatedButton(
               onPressed: () async {
                 final currentContext =
-                    context; // Ambil context dari builder ke variabel lokal
+                    context;
 
                 if (issueController.text.isNotEmpty &&
                     currentDistributionDocId != null) {
@@ -272,10 +262,9 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                               Provider.of<UserProvider>(
                                 currentContext,
                                 listen: false,
-                              ).email, // Gunakan currentContext
+                              ).email,
                         });
 
-                    // PERBAIKAN: Tambahkan kurung kurawal di sini
                     if (!currentContext.mounted) {
                       return;
                     }
@@ -285,18 +274,16 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                     });
 
                     if (currentContext.mounted) {
-                      // Check mounted sebelum snackbar/navigator
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text("Laporan masalah berhasil dikirim."),
                           backgroundColor: Colors.green,
                         ),
                       );
-                      Navigator.pop(currentContext); // Gunakan currentContext
+                      Navigator.pop(currentContext);
                     }
                   } catch (e) {
                     if (currentContext.mounted) {
-                      // Check mounted di catch
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
                           content: Text("Gagal mengirim laporan: $e"),
@@ -307,7 +294,6 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                   }
                 } else {
                   if (currentContext.mounted) {
-                    // Check mounted di else
                     ScaffoldMessenger.of(currentContext).showSnackBar(
                       const SnackBar(
                         content: Text(
@@ -497,7 +483,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                 onPressed: () async {
                   final currentContext =
-                      context; // Ambil context ke variabel lokal
+                      context;
 
                   if (currentDistributionDocId == null) {
                     ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -532,15 +518,12 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                           'jumlahHadirVerified':
                               int.tryParse(hadirController.text.trim()) ?? 0,
                           'verifiedAt': Timestamp.now(),
-                          // Gunakan currentContext untuk Provider
                           'verifiedBy':
                               Provider.of<UserProvider>(
                                 currentContext,
                                 listen: false,
                               ).email,
                         });
-
-                    // PERBAIKAN: Tambahkan kurung kurawal di sini
                     if (!currentContext.mounted) {
                       return;
                     }
@@ -550,7 +533,6 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                     });
 
                     if (currentContext.mounted) {
-                      // Check mounted sebelum snackbar
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -562,7 +544,6 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                     }
                   } catch (e) {
                     if (currentContext.mounted) {
-                      // Check mounted di catch
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
                           content: Text("Gagal mengkonfirmasi distribusi: $e"),
@@ -579,7 +560,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
                 onPressed: () {
                   _showReportIssueDialog(
                     context,
-                  ); // context di sini valid karena langsung dipanggil
+                  );
                 },
                 child: const Text("Laporan Masalah"),
               ),
@@ -773,7 +754,7 @@ class _DistribusiMakananPageState extends State<DistribusiMakananPage> {
           Switch(
             value: isActive,
             onChanged: onChanged,
-          ), // Gunakan onChanged dari parameter
+          ),
         ],
       ),
     );

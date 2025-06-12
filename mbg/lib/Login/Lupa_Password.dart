@@ -35,15 +35,12 @@ class ForgotPasswordScreen extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                // Simpan context ke variabel lokal untuk digunakan di seluruh async gap
                 final currentContext = context; 
 
                 final email = emailController.text.trim();
                 if (email.isNotEmpty) {
                   try {
                     await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-                    
-                    // Setelah await, cek apakah widget masih ada
                     if (!currentContext.mounted) return; 
 
                     ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -60,7 +57,6 @@ class ForgotPasswordScreen extends StatelessWidget {
                       message = 'Gagal mengirim link reset: ${e.message}';
                     }
                     
-                    // Setelah await (catch), cek apakah widget masih ada
                     if (!currentContext.mounted) return;
 
                     ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -70,7 +66,6 @@ class ForgotPasswordScreen extends StatelessWidget {
                       ),
                     );
                   } catch (e) {
-                    // Setelah await (catch), cek apakah widget masih ada
                     if (!currentContext.mounted) return;
 
                     ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -81,7 +76,6 @@ class ForgotPasswordScreen extends StatelessWidget {
                     );
                   }
                 } else {
-                  // Bagian ini sinkronus, context selalu valid
                   ScaffoldMessenger.of(currentContext).showSnackBar(
                     const SnackBar(
                       content: Text('Email tidak boleh kosong!'),

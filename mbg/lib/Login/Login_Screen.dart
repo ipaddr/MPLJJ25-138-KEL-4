@@ -125,7 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         if (userDoc.exists) {
                           String? storedRole = userDoc.get('role');
-                          // PERBAIKAN: Ambil profilePictureUrl dengan aman
                           String? profileUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?;
 
                           if (storedRole == selectedRole) {
