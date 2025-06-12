@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../provider/user_provider.dart';
 
 import 'input_data_siswa_page.dart';
@@ -30,15 +32,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _fetchAdminProfile() async {
-    // Tangkap context ke variabel lokal untuk digunakan setelah async operation
     final currentContext = context; 
 
-    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
+    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
     if (userProvider.uid != null) {
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userProvider.uid).get();
         
-        // Pastikan widget masih mounted sebelum menggunakan currentContext
         if (!currentContext.mounted) return;
 
         if (userDoc.exists) {
@@ -46,13 +46,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
             adminName = userDoc.get('fullName') ?? "Admin Sekolah";
             schoolName = userDoc.get('schoolName') ?? "Nama Sekolah Anda";
             isSchoolVerified = userDoc.get('isSchoolVerified') ?? false;
-            profileImageUrl = userDoc.get('profilePictureUrl');
+            // PERBAIKAN: Ambil profilePictureUrl dengan aman
+            profileImageUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?; 
           });
         }
       } catch (e) {
-        // Pastikan widget masih mounted sebelum menampilkan SnackBar
         if (currentContext.mounted) {
-          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             SnackBar(content: Text("Gagal memuat profil admin: $e"), backgroundColor: Colors.red),
           );
         }
@@ -61,24 +61,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    // Tangkap BuildContext ke variabel lokal sebelum await pertama
     final currentContext = context; 
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    // Setelah await pertama, selalu cek mounted
     if (!currentContext.mounted) return;
 
     if (pickedFile != null) {
-      File imageFile = File(pickedFile.path);
-      // Gunakan currentContext untuk Provider.of
       final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
       String? uid = userProvider.uid;
 
       if (uid == null) {
-        if (currentContext.mounted) { // Gunakan currentContext
-          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(content: Text("Pengguna tidak terautentikasi."), backgroundColor: Colors.red),
           );
         }
@@ -87,30 +83,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       try {
         String fileName = 'profile_pictures/$uid.jpg';
-        UploadTask uploadTask = FirebaseStorage.instance.ref().child(fileName).putFile(imageFile);
-        TaskSnapshot snapshot = await uploadTask;
-        String downloadUrl = await snapshot.ref.getDownloadURL();
+        Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
-        // Setelah await, cek mounted lagi
+        if (kIsWeb) {
+          final bytes = await pickedFile.readAsBytes();
+          await storageRef.putData(bytes); 
+        } else {
+          File imageFile = File(pickedFile.path); // '!' dihapus karena path dijamin tidak null di sini
+          await storageRef.putFile(imageFile); 
+        }
+
+        String downloadUrl = await storageRef.getDownloadURL();
+
         if (!currentContext.mounted) return;
 
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'profilePictureUrl': downloadUrl,
         });
 
-        // Setelah await, cek mounted lagi
         if (!currentContext.mounted) return;
 
         setState(() {
           profileImageUrl = downloadUrl;
         });
         userProvider.updateProfilePictureUrl(downloadUrl);
-        // Gunakan currentContext untuk ScaffoldMessenger
         ScaffoldMessenger.of(currentContext).showSnackBar( 
           const SnackBar(content: Text("Foto profil berhasil diunggah!"), backgroundColor: Colors.green),
         );
       } catch (e) {
-        // Gunakan currentContext di catch block
         if (currentContext.mounted) { 
           ScaffoldMessenger.of(currentContext).showSnackBar( 
             SnackBar(content: Text("Gagal mengunggah foto: $e"), backgroundColor: Colors.red),
@@ -121,34 +121,68 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _verifySchool() async {
-    // Tangkap context ke variabel lokal untuk digunakan setelah async operation
     final currentContext = context;
 
-    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
+    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
     if (userProvider.uid != null) {
       try {
         await FirebaseFirestore.instance.collection('users').doc(userProvider.uid).update({
           'isSchoolVerified': true,
           'verifiedAt': Timestamp.now(),
         });
-        // Pastikan widget masih mounted sebelum melanjutkan atau setState
         if (!currentContext.mounted) return; 
         setState(() {
           isSchoolVerified = true;
         });
-        if (currentContext.mounted) { // Gunakan currentContext
-          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(content: Text("Sekolah berhasil diverifikasi!"), backgroundColor: Colors.green),
           );
         }
       } catch (e) {
-        if (currentContext.mounted) { // Gunakan currentContext
-          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             SnackBar(content: Text("Gagal memverifikasi sekolah: $e"), backgroundColor: Colors.red),
           );
         }
       }
     }
+  }
+
+  // PENTING: Pindahkan method helper ini ke luar method build, di dalam class _AdminDashboardState
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  // PENTING: Pindahkan method helper ini ke luar method build, di dalam class _AdminDashboardState
+  Widget _buildMenuItem(BuildContext context, IconData icon, String title, String subtitle, Color bgColor, Widget page) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: CircleAvatar(
+          backgroundColor: bgColor,
+          child: Icon(icon, color: Colors.black),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+      ),
+    );
   }
 
   @override
@@ -243,40 +277,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _buildMenuItem(context, Icons.rice_bowl, "Distribusi Makanan", "Lacak distribusi harian", Colors.green.shade100, const DistribusiMakananPage()),
           _buildMenuItem(context, Icons.bar_chart, "Laporan Konsumsi", "Lihat statistik harian", Colors.purple.shade100, const LaporanKonsumsiPage()),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 4),
-            Text(label, style: const TextStyle(fontSize: 13)),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _buildMenuItem(BuildContext context, IconData icon, String title, String subtitle, Color bgColor, Widget page) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        leading: CircleAvatar(
-          backgroundColor: bgColor,
-          child: Icon(icon, color: Colors.black),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
       ),
     );
   }

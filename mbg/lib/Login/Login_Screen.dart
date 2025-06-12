@@ -125,11 +125,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         if (userDoc.exists) {
                           String? storedRole = userDoc.get('role');
-                          String? profileUrl = userDoc.get('profilePictureUrl'); // Ambil URL foto profil
+                          // PERBAIKAN: Ambil profilePictureUrl dengan aman
+                          String? profileUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?;
 
                           if (storedRole == selectedRole) {
                             Provider.of<UserProvider>(currentContext, listen: false)
-                                .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!, profilePictureUrl: profileUrl); // Setel URL foto profil
+                                .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!, profilePictureUrl: profileUrl);
 
                             if (!currentContext.mounted) return;
                             Navigator.pushReplacement(

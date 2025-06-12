@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // Tambahkan ini
-import 'package:image_picker/image_picker.dart'; // Tambahkan ini
-import 'dart:io'; // Untuk File
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io'; // Tetap butuh ini untuk mobile/desktop
+import 'package:flutter/foundation.dart' show kIsWeb; // Tambahkan ini!
+
 import '../../provider/user_provider.dart';
 
 import 'evaluasi_nilai_page.dart';
@@ -21,7 +23,7 @@ class GuruDashboard extends StatefulWidget {
 class _GuruDashboardState extends State<GuruDashboard> {
   String guruName = "Nama Guru";
   String guruRoleDisplay = "Guru";
-  String? profileImageUrl; // Tambahkan ini
+  String? profileImageUrl;
 
   @override
   void initState() {
@@ -30,26 +32,24 @@ class _GuruDashboardState extends State<GuruDashboard> {
   }
 
   Future<void> _fetchGuruProfile() async {
-    // Tangkap context ke variabel lokal untuk digunakan setelah async operation
-    final currentContext = context;
+    final currentContext = context; // Capture context here
 
-    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); // Gunakan currentContext
+    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
     if (userProvider.uid != null) {
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userProvider.uid).get();
         
-        // Pastikan widget masih mounted sebelum menggunakan currentContext
         if (!currentContext.mounted) return;
 
         if (userDoc.exists) {
           setState(() {
             guruName = userDoc.get('fullName') ?? "Nama Guru";
             guruRoleDisplay = userDoc.get('role') ?? "Guru";
-            profileImageUrl = userDoc.get('profilePictureUrl'); // Ambil URL foto profil
+            // Ambil profilePictureUrl dengan aman
+            profileImageUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?; 
           });
         }
       } catch (e) {
-        // Pastikan widget masih mounted sebelum menampilkan SnackBar
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
             SnackBar(content: Text("Gagal memuat profil guru: $e"), backgroundColor: Colors.red),
@@ -60,24 +60,21 @@ class _GuruDashboardState extends State<GuruDashboard> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    // Tangkap BuildContext ke variabel lokal sebelum await pertama
-    final currentContext = context;
+    final currentContext = context; // Capture context here
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    // Setelah await pertama, selalu cek mounted
-    if (!currentContext.mounted) return;
+    if (!currentContext.mounted) return; // Check mounted after first await
 
     if (pickedFile != null) {
-      File imageFile = File(pickedFile.path);
-      // Gunakan currentContext untuk Provider.of
+      // Ambil userProvider dan UID setelah memastikan context masih mounted
       final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
       String? uid = userProvider.uid;
 
       if (uid == null) {
-        if (currentContext.mounted) { // Gunakan currentContext
-          ScaffoldMessenger.of(currentContext).showSnackBar( // Gunakan currentContext
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(content: Text("Pengguna tidak terautentikasi."), backgroundColor: Colors.red),
           );
         }
@@ -85,34 +82,43 @@ class _GuruDashboardState extends State<GuruDashboard> {
       }
 
       try {
-        // Upload gambar ke Firebase Storage
-        String fileName = 'profile_pictures/$uid.jpg'; // Path di Storage
-        UploadTask uploadTask = FirebaseStorage.instance.ref().child(fileName).putFile(imageFile);
-        TaskSnapshot snapshot = await uploadTask;
-        String downloadUrl = await snapshot.ref.getDownloadURL();
+        String fileName = 'profile_pictures/$uid.jpg';
+        Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
-        // Setelah await, cek mounted lagi
-        if (!currentContext.mounted) return;
+        if (kIsWeb) {
+          // Logika untuk platform web (browser)
+          // Di web, image_picker mengembalikan XFile tanpa path yang bisa digunakan oleh dart:io.File.
+          // Kita perlu membaca konten file sebagai bytes.
+          final bytes = await pickedFile.readAsBytes();
+          await storageRef.putData(bytes); // Upload bytes
+        } else {
+          // Logika untuk platform mobile (Android/iOS) atau desktop
+          // Di platform native, XFile memiliki path yang bisa digunakan untuk membuat File object.
+          // Menghapus '!' karena path dijamin ada di sini.
+          File imageFile = File(pickedFile.path); 
+          await storageRef.putFile(imageFile); // Upload File
+        }
+
+        String downloadUrl = await storageRef.getDownloadURL();
+
+        if (!currentContext.mounted) return; // Check mounted after Firebase Storage operations
 
         // Update URL di Firestore user document
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'profilePictureUrl': downloadUrl,
         });
 
-        // Setelah await, cek mounted lagi
-        if (!currentContext.mounted) return;
+        if (!currentContext.mounted) return; // Check mounted before setState and UI operations
 
         // Update state dan UserProvider
         setState(() {
           profileImageUrl = downloadUrl;
         });
         userProvider.updateProfilePictureUrl(downloadUrl); // Update di provider
-        // Gunakan currentContext untuk ScaffoldMessenger
         ScaffoldMessenger.of(currentContext).showSnackBar(
           const SnackBar(content: Text("Foto profil berhasil diunggah!"), backgroundColor: Colors.green),
         );
       } catch (e) {
-        // Gunakan currentContext di catch block
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
             SnackBar(content: Text("Gagal mengunggah foto: $e"), backgroundColor: Colors.red),
@@ -120,6 +126,31 @@ class _GuruDashboardState extends State<GuruDashboard> {
         }
       }
     }
+  }
+
+  // PENTING: Pindahkan method helper ini ke luar method build, di dalam class _GuruDashboardState
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle),
+        trailing: CircleAvatar(
+          backgroundColor: iconColor.withAlpha((255 * 0.1).round()),
+          child: Icon(icon, color: iconColor),
+        ),
+        onTap: onTap,
+      ),
+    );
   }
 
   @override
@@ -141,7 +172,7 @@ class _GuruDashboardState extends State<GuruDashboard> {
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: _pickAndUploadImage, // Memungkinkan klik untuk mengganti foto
+                  onTap: _pickAndUploadImage,
                   child: CircleAvatar(
                     radius: 28,
                     backgroundImage: currentProfileImage != null && currentProfileImage.isNotEmpty
@@ -216,30 +247,6 @@ class _GuruDashboardState extends State<GuruDashboard> {
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RekapMingguanPage())),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color iconColor,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: CircleAvatar(
-          backgroundColor: iconColor.withAlpha((255 * 0.1).round()),
-          child: Icon(icon, color: iconColor),
-        ),
-        onTap: onTap,
       ),
     );
   }
