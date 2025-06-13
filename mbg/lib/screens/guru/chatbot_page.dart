@@ -25,7 +25,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   void initState() {
     super.initState();
-    _model = GenerativeModel(model: 'gemini-pro', apiKey: _apiKey);
+    _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: _apiKey);
     _chat = _model!.startChat();
     _addMessage(ChatMessage(text: "Halo! Saya adalah Chatbot Gizi. Ada yang bisa saya bantu terkait nutrisi atau makanan?", isUserMessage: false));
   }
