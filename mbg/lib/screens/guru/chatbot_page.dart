@@ -48,21 +48,29 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
     _addMessage(ChatMessage(text: userMessageText, isUserMessage: true));
     _addMessage(ChatMessage(text: "Mengetik...", isUserMessage: false));
+
     final currentContext = context;
 
     try {
       if (_chat == null) {
         throw Exception("Sesi chat Gemini tidak terinisialisasi.");
       }
-      final response = await _chat!.sendMessage(Content.text(userMessageText));
+
+      final promptForGemini = "Tolong jawab dalam Bahasa Indonesia. " + userMessageText;
+      
+      final response = await _chat!.sendMessage(Content.text(promptForGemini));
+
       if (!currentContext.mounted) return;
+
       setState(() {
         _messages.removeLast();
       });
+
       _addMessage(ChatMessage(text: response.text ?? "Maaf, saya tidak dapat merespons.", isUserMessage: false));
 
     } catch (e) {
       if (!currentContext.mounted) return;
+
       setState(() {
         _messages.removeLast();
       });
