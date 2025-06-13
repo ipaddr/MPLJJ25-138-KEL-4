@@ -20,6 +20,7 @@ dependencies:
   cloud_firestore: ^4.16.0
   image_picker: ^1.0.4
   firebase_storage: ^11.6.0
+  google_generative_ai: ^0.3.0
 
 dev_dependencies:
   flutter_test:

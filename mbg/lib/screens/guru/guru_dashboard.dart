@@ -5,12 +5,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
 import '../../provider/user_provider.dart';
-
 import 'evaluasi_nilai_page.dart';
 import 'penilaian_pemahaman_page.dart';
 import 'rekap_mingguan_page.dart';
+import 'chatbot_page.dart';
 
 class GuruDashboard extends StatefulWidget {
   const GuruDashboard({super.key});
@@ -33,18 +32,18 @@ class _GuruDashboardState extends State<GuruDashboard> {
   Future<void> _fetchGuruProfile() async {
     final currentContext = context;
 
-    final userProvider = Provider.of<UserProvider>(currentContext, listen: false); 
+    final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
     if (userProvider.uid != null) {
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userProvider.uid).get();
-        
+
         if (!currentContext.mounted) return;
 
         if (userDoc.exists) {
           setState(() {
             guruName = userDoc.get('fullName') ?? "Nama Guru";
             guruRoleDisplay = userDoc.get('role') ?? "Guru";
-            profileImageUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?; 
+            profileImageUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?;
           });
         }
       } catch (e) {
@@ -86,20 +85,18 @@ class _GuruDashboardState extends State<GuruDashboard> {
           final bytes = await pickedFile.readAsBytes();
           await storageRef.putData(bytes);
         } else {
-          File imageFile = File(pickedFile.path); 
+          File imageFile = File(pickedFile.path);
           await storageRef.putFile(imageFile);
         }
 
         String downloadUrl = await storageRef.getDownloadURL();
 
         if (!currentContext.mounted) return;
-
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'profilePictureUrl': downloadUrl,
         });
 
         if (!currentContext.mounted) return;
-
         setState(() {
           profileImageUrl = downloadUrl;
         });
@@ -177,7 +174,32 @@ class _GuruDashboardState extends State<GuruDashboard> {
                   ],
                 ),
                 const Spacer(),
-                Stack(
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                    );
+                  },
+                  child: Stack(
+                    children: [
+                      const Icon(Icons.smart_toy, size: 28),
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Stack( 
                   children: [
                     const Icon(Icons.notifications_none, size: 28),
                     Positioned(
@@ -197,16 +219,6 @@ class _GuruDashboardState extends State<GuruDashboard> {
             ),
           ),
           const SizedBox(height: 20),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.smart_toy, size: 32, color: Colors.blue),
-            ),
-          ),
           const SizedBox(height: 24),
           const Text("Menu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
