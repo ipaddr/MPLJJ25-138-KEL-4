@@ -18,9 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  final schoolController = TextEditingController();
+  final schoolController = TextEditingController(); // Digunakan untuk nama sekolah/NIS anak
 
-  final usernameController = TextEditingController(); 
+  // final usernameController = TextEditingController(); // Ini bisa dihapus jika tidak digunakan
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
@@ -57,8 +57,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (step == 1) ...[
               _buildField("Nama Lengkap", "Isi nama lengkap", fullNameController),
               _buildField("Email", "your@email.com", emailController),
-              _buildField("No. Handphone", "012345678901", phoneController),
-              _buildField("Asal Sekolah", "Isi nama sekolah", schoolController),
+              _buildField("No. Handphone", "012345678901", phoneController), // Contoh format
+              _buildField("Asal Sekolah / NIS Anak", "Isi nama sekolah atau NIS anak", schoolController),
               const SizedBox(height: 32),
               _buildPrimaryButton("Selanjutnya", () {
                 if (fullNameController.text.isEmpty || emailController.text.isEmpty ||
@@ -73,7 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ] else ...[
               _buildPasswordField("Password", passwordController, showPassword, () => setState(() => showPassword = !showPassword)),
               _buildPasswordField("Konfirmasi Password", confirmPasswordController, showConfirmPassword, () => setState(() => showConfirmPassword = !showConfirmPassword)),
-              _buildRoleDropdown(),
+              _buildRoleDropdown(), // Dropdown for role selection
               const SizedBox(height: 32),
               _buildPrimaryButton("Buat Akun", () async {
                 final currentContext = context;
@@ -100,13 +100,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   if (!currentContext.mounted) return;
 
-                  await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+                  Map<String, dynamic> userData = {
                     'fullName': fullNameController.text.trim(),
                     'email': emailController.text.trim(),
                     'phoneNumber': phoneController.text.trim(),
-                    'schoolName': schoolController.text.trim(),
                     'role': selectedRole,
-                  });
+                    'profilePictureUrl': '', // Default kosong
+                  };
+
+                  if (selectedRole == 'Admin Sekolah') {
+                    userData['schoolName'] = schoolController.text.trim();
+                    userData['isSchoolVerified'] = false; // Default: belum diverifikasi oleh Dinas
+
+                    // Buat dokumen sekolah baru di koleksi 'schools'
+                    DocumentReference schoolRef = await FirebaseFirestore.instance.collection('schools').add({
+                      'schoolName': schoolController.text.trim(),
+                      'address': '', // Tambahkan field alamat jika ada
+                      'adminUserId': userCredential.user!.uid,
+                      'isVerified': false, // Status verifikasi oleh Dinas Pendidikan
+                      'registeredAt': Timestamp.now(),
+                    });
+                    userData['schoolId'] = schoolRef.id; // Simpan ID sekolah di profil Admin
+                  } else if (selectedRole == 'Guru') {
+                    userData['schoolId'] = schoolController.text.trim(); // Untuk sementara anggap schoolController berisi schoolId/name
+                  } else if (selectedRole == 'Orang Tua') {
+                    userData['isApproved'] = false; // Default: belum disetujui
+                    userData['childIds'] = []; // Default: belum ada anak terhubung
+                    userData['childNisRequest'] = schoolController.text.trim(); // NIS yang diajukan oleh ortu
+                  } else if (selectedRole == 'Dinas Pendidikan') {
+                    userData['dinasName'] = fullNameController.text.trim(); // Atau nama dinas
+                  }
+                  // Tim Katering tidak memerlukan tambahan field khusus saat registrasi ini
+
+                  await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
 
                   if (!currentContext.mounted) return;
 

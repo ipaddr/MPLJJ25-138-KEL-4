@@ -17,7 +17,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
     "Kecepatan memahami": 0,
   };
 
-  String komentar = "";
+  final TextEditingController _komentarController = TextEditingController();
 
   List<Map<String, dynamic>> students = [];
   String? selectedStudentId;
@@ -28,18 +28,42 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
     _fetchStudents();
   }
 
+  @override
+  void dispose() {
+    _komentarController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchStudents() async {
     try {
-      QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final String? guruSchoolId = userProvider.schoolId;
+
+      if (guruSchoolId == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("ID Sekolah Guru tidak ditemukan."), backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
+          .collection('students')
+          .where('schoolId', isEqualTo: guruSchoolId)
+          .get();
+
       if (!mounted) return;
 
       setState(() {
         students = studentSnapshot.docs.map((doc) => {
-          'id': doc.id,
-          'nama': doc.get('nama') ?? 'Nama Tidak Diketahui',
-        }).toList();
+              'id': doc.id,
+              'nama': doc.get('nama') ?? 'Nama Tidak Diketahui',
+            }).toList();
+        _filterAssessedStudents(); // Filter students who already have an assessment for today
         if (students.isNotEmpty) {
           selectedStudentId = students.first['id'];
+        } else {
+          selectedStudentId = null; // No students left to assess
         }
       });
     } catch (e) {
@@ -48,6 +72,53 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
         SnackBar(content: Text("Gagal memuat daftar siswa: $e"), backgroundColor: Colors.red),
       );
     }
+  }
+
+  Future<void> _filterAssessedStudents() async {
+    if (students.isEmpty) return;
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final String? guruUid = userProvider.uid;
+    if (guruUid == null) return;
+
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+    List<String> assessedStudentIds = [];
+
+    try {
+      QuerySnapshot assessmentSnapshot = await FirebaseFirestore.instance
+          .collection('understandingAssessments')
+          .where('teacherId', isEqualTo: guruUid)
+          .where('assessmentDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('assessmentDate', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .get();
+
+      for (var doc in assessmentSnapshot.docs) {
+        assessedStudentIds.add(doc.get('studentId'));
+      }
+
+      setState(() {
+        students.removeWhere((student) => assessedStudentIds.contains(student['id']));
+        if (selectedStudentId != null && assessedStudentIds.contains(selectedStudentId)) {
+          selectedStudentId = students.isNotEmpty ? students.first['id'] : null;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memfilter siswa yang sudah dinilai: $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _resetForm() {
+    setState(() {
+      nilai.forEach((key, value) => nilai[key] = 0);
+      _komentarController.clear();
+      // The selected student will be updated by _filterAssessedStudents
+    });
   }
 
   @override
@@ -78,44 +149,68 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                   selectedStudentId = value;
                 });
               },
+              isExpanded: true,
+              hint: students.isEmpty
+                  ? const Text("Semua siswa sudah dinilai hari ini.")
+                  : const Text("Pilih Siswa"),
             ),
             const SizedBox(height: 20),
-            ...nilai.keys.map((kriteria) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(kriteria, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: List.generate(5, (index) {
-                      int score = index + 1;
-                      return ChoiceChip(
-                        label: Text(score.toString()),
-                        selected: nilai[kriteria] == score,
-                        onSelected: (_) {
-                          setState(() {
-                            nilai[kriteria] = score;
-                          });
-                        },
+            if (students.isEmpty && selectedStudentId == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Center(
+                  child: Text(
+                    "Semua siswa sudah dinilai untuk hari ini atau belum ada siswa terdaftar.",
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            if (selectedStudentId != null)
+              Expanded(
+                child: ListView(
+                  children: [
+                    ...nilai.keys.map((kriteria) { // Hapus .toList() di sini
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(kriteria, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: List.generate(5, (index) {
+                              int score = index + 1;
+                              return ChoiceChip(
+                                label: Text(score.toString()),
+                                selected: nilai[kriteria] == score,
+                                onSelected: (_) {
+                                  setState(() {
+                                    nilai[kriteria] = score;
+                                  });
+                                },
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       );
                     }),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              );
-            }),
-
-            const Text("Pengamatan guru", style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            TextFormField(
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: "Masukkan pengamatan anda di sini ...",
-                border: OutlineInputBorder(),
+                    const Text("Pengamatan guru", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _komentarController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: "Masukkan pengamatan anda di sini ...",
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        // Controller secara langsung memanage value, tidak perlu update string `komentar` di sini
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
-              onChanged: (value) => komentar = value,
-            ),
-            const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -124,7 +219,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                   child: const Text("Kembali"),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
+                  onPressed: selectedStudentId == null ? null : () async {
                     final currentContext = context;
 
                     if (selectedStudentId == null) {
@@ -142,16 +237,38 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                     }
 
                     try {
-                      final user = Provider.of<UserProvider>(currentContext, listen: false);
+                      final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
+                      String? guruUid = userProvider.uid;
+                      String? guruSchoolId = userProvider.schoolId;
+
+                      if (guruUid == null || guruSchoolId == null) {
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
+                          const SnackBar(content: Text("Profil Guru tidak lengkap (UID/SchoolID)."), backgroundColor: Colors.red),
+                        );
+                        return;
+                      }
+
                       await FirebaseFirestore.instance.collection('understandingAssessments').add({
                         'studentId': selectedStudentId,
-                        'teacherId': user.uid,
+                        'teacherId': guruUid,
+                        'schoolId': guruSchoolId,
                         'assessmentDate': Timestamp.now(),
                         'fokusSetelahMakan': nilai['Fokus setelah makan'],
                         'keaktifanDalamDiskusi': nilai['Keaktifan dalam diskusi'],
                         'kecepatanMemahami': nilai['Kecepatan memahami'],
-                        'komentarGuru': komentar,
+                        'komentarGuru': _komentarController.text,
                       });
+
+                      if (_komentarController.text.isNotEmpty) {
+                        await FirebaseFirestore.instance.collection('teacherComments').add({
+                          'teacherId': guruUid,
+                          'teacherName': userProvider.fullName ?? "Guru",
+                          'schoolId': guruSchoolId,
+                          'studentId': selectedStudentId,
+                          'comment': _komentarController.text,
+                          'commentedAt': Timestamp.now(),
+                        });
+                      }
 
                       if (!currentContext.mounted) return;
 
@@ -159,12 +276,8 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         const SnackBar(content: Text("Penilaian berhasil disimpan!"), backgroundColor: Colors.green),
                       );
 
-                      setState(() {
-                        nilai.forEach((key, value) => nilai[key] = 0);
-                        komentar = "";
-                        students.removeWhere((s) => s['id'] == selectedStudentId);
-                        selectedStudentId = students.isNotEmpty ? students.first['id'] : null;
-                      });
+                      _resetForm();
+                      await _fetchStudents();
                     } catch (e) {
                       if (!currentContext.mounted) return;
                       ScaffoldMessenger.of(currentContext).showSnackBar(

@@ -44,6 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),
+
                 TextField(
                   controller: emailController,
                   decoration: const InputDecoration(
@@ -52,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 TextField(
                   controller: passwordController,
                   obscureText: true,
@@ -61,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Pilih Role',
@@ -80,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -95,6 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -125,11 +130,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         if (userDoc.exists) {
                           String? storedRole = userDoc.get('role');
-                          String? profileUrl = (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl'] as String?;
+                          String? fullName = userDoc.get('fullName');
+                          String? schoolId = userDoc.get('schoolId');
+                          String? profilePictureUrl = userDoc.get('profilePictureUrl');
+                          bool? isApproved = userDoc.get('isApproved'); // Untuk Orang Tua
+                          List<String> childIds = List<String>.from(userDoc.get('childIds') ?? []); // Untuk Orang Tua
 
                           if (storedRole == selectedRole) {
                             Provider.of<UserProvider>(currentContext, listen: false)
-                                .setUser(userCredential.user!.uid, userCredential.user!.email, storedRole!, profilePictureUrl: profileUrl);
+                                .setUser(
+                                  userCredential.user!.uid,
+                                  userCredential.user!.email,
+                                  storedRole!,
+                                  fullName: fullName,
+                                  schoolId: schoolId,
+                                  profilePictureUrl: profilePictureUrl,
+                                  isApproved: isApproved,
+                                  childIds: childIds,
+                                );
 
                             if (!currentContext.mounted) return;
                             Navigator.pushReplacement(
@@ -184,6 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
