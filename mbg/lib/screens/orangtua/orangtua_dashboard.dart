@@ -83,64 +83,51 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       return;
     }
 
-    // Cari siswa berdasarkan NIS dan nama sekolah yang diinput
-    QuerySnapshot studentSnapshot = await FirebaseFirestore.instance.collection('students')
-        .where('nis', isEqualTo: nisController.text.trim())
-        .get(); // Filter by NIS
-
     String? studentIdToRequest;
-    if (studentSnapshot.docs.isNotEmpty) {
-      // Lebih baik mencari sekolah dulu
-      QuerySnapshot schoolSnapshot = await FirebaseFirestore.instance.collection('users')
-          .where('role', isEqualTo: 'Admin Sekolah')
+    String? schoolIdOfStudent;
+
+    try {
+      // 1. Cari dokumen sekolah berdasarkan nama sekolah yang diinput
+      QuerySnapshot schoolQuerySnapshot = await FirebaseFirestore.instance.collection('schools')
           .where('schoolName', isEqualTo: sekolahController.text.trim())
           .limit(1)
           .get();
 
-      if (schoolSnapshot.docs.isNotEmpty) {
-        String adminSchoolId = schoolSnapshot.docs.first.id; // ID dokumen Admin yang sekolahnya cocok
-        // Cari siswa yang NIS-nya cocok dan ada di sekolah tersebut
-        QuerySnapshot finalStudentCheck = await FirebaseFirestore.instance.collection('students')
-            .where('nis', isEqualTo: nisController.text.trim())
-            .where('schoolId', isEqualTo: adminSchoolId) // Pastikan siswa ada di sekolah yang dimaksud
-            .limit(1)
-            .get();
-
-        if (finalStudentCheck.docs.isNotEmpty) {
-          studentIdToRequest = finalStudentCheck.docs.first.id;
-        } else {
-          if (currentContext.mounted) {
-            ScaffoldMessenger.of(currentContext).showSnackBar(
-              const SnackBar(content: Text("NIS anak tidak ditemukan di sekolah tersebut."), backgroundColor: Colors.red),
-            );
-          }
-          return;
-        }
-      } else {
+      if (schoolQuerySnapshot.docs.isEmpty) {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(content: Text("Nama sekolah tidak ditemukan."), backgroundColor: Colors.red),
+            const SnackBar(content: Text("Nama sekolah tidak ditemukan atau belum diverifikasi oleh Dinas."), backgroundColor: Colors.red),
           );
         }
         return;
       }
-    } else {
-      if (currentContext.mounted) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("NIS anak tidak ditemukan."), backgroundColor: Colors.red),
-        );
-      }
-      return;
-    }
 
-    // Jika siswa ditemukan, buat permintaan akses
-    try {
+      schoolIdOfStudent = schoolQuerySnapshot.docs.first.id;
+
+      // 2. Cari siswa berdasarkan NIS dan schoolId yang ditemukan
+      QuerySnapshot studentQuerySnapshot = await FirebaseFirestore.instance.collection('students')
+          .where('nis', isEqualTo: nisController.text.trim())
+          .where('schoolId', isEqualTo: schoolIdOfStudent)
+          .limit(1)
+          .get();
+
+      if (studentQuerySnapshot.docs.isEmpty) {
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
+            const SnackBar(content: Text("NIS anak tidak ditemukan di sekolah tersebut."), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+      studentIdToRequest = studentQuerySnapshot.docs.first.id;
+
+      // Jika siswa ditemukan, buat permintaan akses
       await FirebaseFirestore.instance.collection('parentApprovalRequests').add({
         'parentId': parentUid,
         'childNis': nisController.text.trim(),
-        'childId': studentIdToRequest, // Simpan ID siswa
+        'childId': studentIdToRequest, // Simpan ID dokumen siswa
         'schoolName': sekolahController.text.trim(),
-        'schoolId': (await FirebaseFirestore.instance.collection('users').doc(studentIdToRequest).get()).get('schoolId'), // Ambil schoolId dari siswa
+        'schoolId': schoolIdOfStudent, // Simpan ID dokumen sekolah
         'status': 'pending',
         'requestedAt': Timestamp.now(),
       });
@@ -230,9 +217,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
               const SizedBox(height: 40),
 
               // Tampilan utama berdasarkan status persetujuan
-              if (!isApproved) // Jika belum disetujui
+              if (!userProvider.isApproved!) // Menggunakan isApproved dari UserProvider
                 _buildApprovalRequestForm()
-              else if (childIds.isEmpty) // Jika disetujui tapi belum ada anak terdaftar
+              else if (userProvider.childIds!.isEmpty) // Jika disetujui tapi belum ada anak terdaftar
                 _buildNoChildFound()
               else // Jika disetujui dan ada anak
                 _buildChildDashboard(userProvider.childIds![0]), // Menampilkan anak pertama
@@ -303,7 +290,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       ],
     );
   }
-
 
   // Dashboard anak (setelah disetujui dan anak terhubung)
   Widget _buildChildDashboard(String childId) {

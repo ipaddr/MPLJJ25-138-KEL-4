@@ -56,7 +56,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
         throw Exception("Sesi chat Gemini tidak terinisialisasi.");
       }
 
-      final promptForGemini = "Tolong jawab dalam Bahasa Indonesia. " + userMessageText;
+      final promptForGemini = "Tolong jawab dalam Bahasa Indonesia. $userMessageText";
       
       final response = await _chat!.sendMessage(Content.text(promptForGemini));
 

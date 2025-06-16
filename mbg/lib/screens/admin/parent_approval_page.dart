@@ -70,7 +70,7 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
               var request = requests[index].data() as Map<String, dynamic>;
               String requestId = requests[index].id;
               String parentId = request['parentId'] ?? 'N/A';
-              String childId = request['childId'] ?? 'N/A';
+              String childId = request['childId'] ?? 'N/A'; // Ini adalah ID dokumen siswa
               String childNis = request['childNis'] ?? 'N/A';
               String schoolName = request['schoolName'] ?? 'N/A';
               Timestamp requestedAt = request['requestedAt'] ?? Timestamp.now();
@@ -82,7 +82,7 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Permintaan dari Orang Tua: $parentId", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text("Permintaan dari Orang Tua ID: $parentId", style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text("NIS Anak: $childNis"),
                       Text("Nama Sekolah: $schoolName"),
                       Text("Diminta pada: ${DateFormat('dd-MM-yyyy HH:mm').format(requestedAt.toDate())}"),
@@ -128,9 +128,8 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
       return;
     }
 
-    String studentIdToUpdateParent = childId;
-
     try {
+      // Update status permintaan di koleksi parentApprovalRequests
       await FirebaseFirestore.instance.collection('parentApprovalRequests').doc(requestId).update({
         'status': status,
         'processedByAdminId': adminUid,
@@ -138,50 +137,65 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
       });
 
       if (status == 'approved') {
-        if (studentIdToUpdateParent != 'N/A') {
-          // Cek apakah studentIdToUpdateParent adalah ID yang valid dari siswa yang terdaftar di Firestore
-          DocumentSnapshot actualStudentDoc = await FirebaseFirestore.instance.collection('students').doc(studentIdToUpdateParent).get();
+        // Jika disetujui, tambahkan childId ke array childIds di profil Orang Tua
+        // Dan tambahkan parentId ke array parentIds di dokumen siswa
+        if (childId != 'N/A') {
+          // Periksa apakah studentIdToUpdateParent adalah ID yang valid dari siswa yang terdaftar di Firestore
+          DocumentSnapshot actualStudentDoc = await FirebaseFirestore.instance.collection('students').doc(childId).get();
           if (!currentContext.mounted) return;
 
           if (actualStudentDoc.exists) {
-            await FirebaseFirestore.instance.collection('students').doc(studentIdToUpdateParent).update({
+            await FirebaseFirestore.instance.collection('students').doc(childId).update({
               'parentIds': FieldValue.arrayUnion([parentId]),
             });
 
-            if (!currentContext.mounted) return;
-            Provider.of<UserProvider>(currentContext, listen: false).updateApprovalStatus(true);
-            Provider.of<UserProvider>(currentContext, listen: false).addChildId(studentIdToUpdateParent);
-
+            // Perbarui status isApproved dan childIds di dokumen user Orang Tua
             await FirebaseFirestore.instance.collection('users').doc(parentId).update({
               'isApproved': true,
-              'childIds': FieldValue.arrayUnion([studentIdToUpdateParent]),
+              'childIds': FieldValue.arrayUnion([childId]),
             });
+
+            // Perbarui UserProvider untuk UI
+            if (currentContext.mounted) {
+              Provider.of<UserProvider>(currentContext, listen: false).updateApprovalStatus(true);
+              Provider.of<UserProvider>(currentContext, listen: false).addChildId(childId);
+            }
           } else {
-             if (currentContext.mounted) {
-               ScaffoldMessenger.of(currentContext).showSnackBar(
-                 const SnackBar(content: Text("Peringatan: ID Siswa tidak ditemukan di database. Approval dilakukan, tapi data anak tidak terhubung."), backgroundColor: Colors.orange),
-               );
-             }
+            if (currentContext.mounted) {
+              ScaffoldMessenger.of(currentContext).showSnackBar(
+                const SnackBar(content: Text("Peringatan: ID Siswa tidak ditemukan di database. Approval dilakukan, tapi data anak tidak terhubung."), backgroundColor: Colors.orange),
+              );
+            }
           }
         } else {
-           if (currentContext.mounted) {
-               ScaffoldMessenger.of(currentContext).showSnackBar(
-                 const SnackBar(content: Text("Peringatan: ID Siswa dalam permintaan tidak valid ('N/A'). Approval dilakukan, tapi data anak tidak terhubung."), backgroundColor: Colors.orange),
-               );
-             }
+          if (currentContext.mounted) {
+            ScaffoldMessenger.of(currentContext).showSnackBar(
+              const SnackBar(content: Text("Peringatan: ID Siswa dalam permintaan tidak valid ('N/A'). Approval dilakukan, tapi data anak tidak terhubung."), backgroundColor: Colors.orange),
+            );
+          }
         }
       } else { // Jika status == 'rejected'
-        if (!currentContext.mounted) return;
-        Provider.of<UserProvider>(currentContext, listen: false).updateApprovalStatus(false);
-        
-        if (studentIdToUpdateParent != 'N/A') {
-          Provider.of<UserProvider>(currentContext, listen: false).removeChildId(studentIdToUpdateParent);
-        }
-
+        // Set isApproved menjadi false dan hapus childId dari array childIds di profil Orang Tua
         await FirebaseFirestore.instance.collection('users').doc(parentId).update({
           'isApproved': false,
-          'childIds': (studentIdToUpdateParent != 'N/A') ? FieldValue.arrayRemove([studentIdToUpdateParent]) : FieldValue.arrayRemove([]),
+          'childIds': FieldValue.arrayRemove([childId]), // Hapus childId jika ada
         });
+
+        // Hapus parentId dari dokumen siswa jika ada
+        if (childId != 'N/A') {
+          DocumentSnapshot actualStudentDoc = await FirebaseFirestore.instance.collection('students').doc(childId).get();
+          if (actualStudentDoc.exists) {
+            await FirebaseFirestore.instance.collection('students').doc(childId).update({
+              'parentIds': FieldValue.arrayRemove([parentId]),
+            });
+          }
+        }
+        
+        // Perbarui UserProvider untuk UI
+        if (currentContext.mounted) {
+          Provider.of<UserProvider>(currentContext, listen: false).updateApprovalStatus(false);
+          Provider.of<UserProvider>(currentContext, listen: false).removeChildId(childId);
+        }
       }
       
       if (!currentContext.mounted) return;

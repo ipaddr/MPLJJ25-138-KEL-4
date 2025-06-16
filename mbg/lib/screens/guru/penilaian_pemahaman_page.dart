@@ -47,9 +47,10 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
         return;
       }
 
+      // Fetch students belonging to the teacher's school
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
           .collection('students')
-          .where('schoolId', isEqualTo: guruSchoolId)
+          .where('schoolId', isEqualTo: guruSchoolId) // Filter students by schoolId
           .get();
 
       if (!mounted) return;
@@ -240,6 +241,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                       final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
                       String? guruUid = userProvider.uid;
                       String? guruSchoolId = userProvider.schoolId;
+                      String? guruFullName = userProvider.fullName;
 
                       if (guruUid == null || guruSchoolId == null) {
                         ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -248,6 +250,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         return;
                       }
 
+                      // Simpan penilaian ke understandingAssessments
                       await FirebaseFirestore.instance.collection('understandingAssessments').add({
                         'studentId': selectedStudentId,
                         'teacherId': guruUid,
@@ -259,10 +262,11 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         'komentarGuru': _komentarController.text,
                       });
 
+                      // Simpan komentar guru ke koleksi teacherComments
                       if (_komentarController.text.isNotEmpty) {
                         await FirebaseFirestore.instance.collection('teacherComments').add({
                           'teacherId': guruUid,
-                          'teacherName': userProvider.fullName ?? "Guru",
+                          'teacherName': guruFullName ?? "Guru", // Use full name if available
                           'schoolId': guruSchoolId,
                           'studentId': selectedStudentId,
                           'comment': _komentarController.text,
@@ -277,7 +281,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                       );
 
                       _resetForm();
-                      await _fetchStudents();
+                      await _fetchStudents(); // Refresh student list
                     } catch (e) {
                       if (!currentContext.mounted) return;
                       ScaffoldMessenger.of(currentContext).showSnackBar(

@@ -23,6 +23,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
   int totalStudents = 0;
   double averageScore = 0.0;
   List<Map<String, dynamic>> teacherComments = [];
+  List<FlSpot> evaluationSpots = []; // Data for the evaluation chart
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
     _fetchDinasProfile();
     _fetchDinasStats();
     _fetchTeacherComments();
+    _fetchEvaluationChartData();
   }
 
   Future<void> _fetchDinasProfile() async {
@@ -37,22 +39,22 @@ class _DinasDashboardState extends State<DinasDashboard> {
     final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
     String? uid = userProvider.uid;
 
-    if (uid != null) {
-      try {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        if (!currentContext.mounted) return;
+    if (uid == null) return;
 
-        if (userDoc.exists) {
-          setState(() {
-            dinasName = userDoc.get('fullName') ?? "Dinas Pendidikan";
-          });
-        }
-      } catch (e) {
-        if (currentContext.mounted) {
-          ScaffoldMessenger.of(currentContext).showSnackBar(
-            SnackBar(content: Text("Gagal memuat profil dinas: $e"), backgroundColor: Colors.red),
-          );
-        }
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (!currentContext.mounted) return;
+
+      if (userDoc.exists) {
+        setState(() {
+          dinasName = userDoc.get('fullName') ?? "Dinas Pendidikan";
+        });
+      }
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal memuat profil dinas: $e"), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -125,7 +127,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
     final currentContext = context;
     try {
       QuerySnapshot commentSnapshot = await FirebaseFirestore.instance
-          .collection('teacherComments')
+          .collection('teacherComments') // Ambil dari koleksi teacherComments
           .orderBy('commentedAt', descending: true)
           .limit(10) // Ambil 10 komentar terbaru
           .get();
@@ -144,6 +146,57 @@ class _DinasDashboardState extends State<DinasDashboard> {
     }
   }
 
+  Future<void> _fetchEvaluationChartData() async {
+    final currentContext = context;
+    try {
+      // Fetch all academic evaluations
+      QuerySnapshot evaluationSnapshot = await FirebaseFirestore.instance
+          .collection('academicEvaluations')
+          .orderBy('evaluationDate') // Order by date for chronological data
+          .get();
+
+      if (!currentContext.mounted) return;
+
+      Map<String, List<int>> monthlyScores = {}; // Key: YYYY-MM, Value: List of scores
+
+      for (var doc in evaluationSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        Timestamp timestamp = data['evaluationDate'] as Timestamp;
+        DateTime date = timestamp.toDate();
+        String monthKey = DateFormat('yyyy-MM').format(date); // Group by month
+
+        int score = data['afterMbgScore'] ?? 0; // Use afterMbgScore for evaluation
+        
+        if (!monthlyScores.containsKey(monthKey)) {
+          monthlyScores[monthKey] = [];
+        }
+        monthlyScores[monthKey]!.add(score);
+      }
+
+      List<FlSpot> tempSpots = [];
+      List<String> sortedMonths = monthlyScores.keys.toList()..sort(); // Sort months chronologically
+
+      for (int i = 0; i < sortedMonths.length; i++) {
+        String month = sortedMonths[i];
+        List<int> scores = monthlyScores[month]!;
+        double avg = scores.isNotEmpty ? scores.reduce((a, b) => a + b) / scores.length : 0.0;
+        tempSpots.add(FlSpot(i.toDouble(), avg));
+      }
+
+      setState(() {
+        evaluationSpots = tempSpots;
+      });
+
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal memuat data grafik evaluasi: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+
   Widget _statTile(String title, String value, IconData icon) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -161,18 +214,15 @@ class _DinasDashboardState extends State<DinasDashboard> {
   }
 
   Widget _grafikEvaluasi() {
-    // Ini masih menggunakan data dummy untuk grafik.
-    // Jika Anda ingin grafik ini menampilkan data evaluasi siswa sesungguhnya
-    // (misal, rata-rata nilai per sekolah atau per bulan),
-    // Anda perlu memproses data academicEvaluations lebih lanjut.
-    final List<FlSpot> spots = [
-      const FlSpot(0, 70), // Jan
-      const FlSpot(1, 75), // Feb
-      const FlSpot(2, 80), // Mar
-      const FlSpot(3, 82), // Apr
-      const FlSpot(4, 78), // May
-      const FlSpot(5, 85), // Jun
-    ];
+    // Determine the max Y value for the chart
+    double maxY = 100; // Assuming scores are out of 100
+    if (evaluationSpots.isNotEmpty) {
+      // Use .y instead of .toY
+      double maxScore = evaluationSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+      if (maxScore > maxY) {
+        maxY = maxScore * 1.1; // Add 10% buffer if max score exceeds 100
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -226,33 +276,15 @@ class _DinasDashboardState extends State<DinasDashboard> {
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     );
-                    Widget text;
-                    switch (value.toInt()) {
-                      case 0:
-                        text = const Text('Jan', style: style);
-                        break;
-                      case 1:
-                        text = const Text('Feb', style: style);
-                        break;
-                      case 2:
-                        text = const Text('Mar', style: style);
-                        break;
-                      case 3:
-                        text = const Text('Apr', style: style);
-                        break;
-                      case 4:
-                        text = const Text('Mei', style: style);
-                        break;
-                      case 5:
-                        text = const Text('Jun', style: style);
-                        break;
-                      default:
-                        text = const Text('', style: style);
-                        break;
+                    // Generate month labels dynamically based on available data
+                    if (evaluationSpots.isEmpty) {
+                      return const Text('', style: style); // No data, no label
                     }
+                    // Map the index back to a month string (assuming sorted data)
+                    // This is a simplification; in a real app, you might store month names with the spots
                     return SideTitleWidget(
                       axisSide: meta.axisSide,
-                      child: text,
+                      child: Text(DateFormat('MMM').format(DateTime(2024, value.toInt() + 1)), style: style),
                     );
                   },
                 ),
@@ -277,12 +309,12 @@ class _DinasDashboardState extends State<DinasDashboard> {
               border: Border.all(color: const Color(0xff37434d), width: 1),
             ),
             minX: 0,
-            maxX: spots.length - 1.0,
+            maxX: evaluationSpots.isNotEmpty ? evaluationSpots.length - 1.0 : 0, // Dynamic max X
             minY: 0,
-            maxY: 100, // Assuming scores are out of 100
+            maxY: maxY, // Dynamic max Y
             lineBarsData: [
               LineChartBarData(
-                spots: spots,
+                spots: evaluationSpots,
                 isCurved: true,
                 gradient: LinearGradient(
                   colors: [
@@ -329,6 +361,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Logout berhasil!"), backgroundColor: Colors.green),
               );
+              // Implement actual logout logic if needed
             },
           ),
         ],
@@ -403,7 +436,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
                 );
               },
               icon: const Icon(Icons.description, color: Colors.white),
-              label: const Text("Lihat Laporan Evaluasi", style: TextStyle(color: Colors.white)),
+              label: const Text("Lihat Laporan Konsumsi", style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
                 padding: const EdgeInsets.symmetric(vertical: 12),
