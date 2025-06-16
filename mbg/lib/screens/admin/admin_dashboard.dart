@@ -23,15 +23,17 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   String adminName = "Admin Sekolah";
   String schoolName = "Nama Sekolah Anda";
-  bool isSchoolVerified = false; // This will now represent if a verification request has been sent
+  bool isSchoolVerified = false; // Status verifikasi sekolah dari koleksi 'schools'
   String? profileImageUrl;
-  int pendingApprovalCount = 0; // Added for notification count
+  int pendingApprovalCount = 0; // For parent approval requests
+  String schoolVerificationStatus = "Belum Mengajukan"; // Status permintaan verifikasi sekolah
 
   @override
   void initState() {
     super.initState();
     _fetchAdminProfile();
-    _listenToParentApprovalRequests(); // New listener for parent approval requests
+    _listenToParentApprovalRequests(); // Listener for parent approval requests
+    _listenToSchoolVerificationStatus(); // New listener for school verification status
   }
 
   // Listener for parent approval requests
@@ -51,6 +53,54 @@ class _AdminDashboardState extends State<AdminDashboard> {
       setState(() {
         pendingApprovalCount = snapshot.docs.length;
       });
+    });
+  }
+
+  // New listener for school verification status
+  void _listenToSchoolVerificationStatus() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    String? adminSchoolId = userProvider.schoolId;
+
+    if (adminSchoolId == null) return;
+
+    // Listen to the 'schools' document for changes in 'isVerified' status
+    FirebaseFirestore.instance
+        .collection('schools')
+        .doc(adminSchoolId)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      if (snapshot.exists) {
+        setState(() {
+          isSchoolVerified = snapshot.get('isVerified') ?? false;
+        });
+      } else {
+        // Handle case where school document might not exist yet
+        setState(() {
+          isSchoolVerified = false;
+        });
+      }
+    });
+
+    // Listen to schoolVerificationRequests for status
+    FirebaseFirestore.instance
+        .collection('schoolVerificationRequests')
+        .where('schoolId', isEqualTo: adminSchoolId)
+        .orderBy('requestedAt', descending: true)
+        .limit(1) // Get the latest request
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      if (snapshot.docs.isNotEmpty) {
+        String status = snapshot.docs.first.get('status') ?? "Belum Mengajukan";
+        setState(() {
+          schoolVerificationStatus = status;
+        });
+      } else {
+        setState(() {
+          schoolVerificationStatus = "Belum Mengajukan";
+        });
+      }
     });
   }
 
@@ -74,9 +124,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           setState(() {
             adminName = userDoc.get('fullName') ?? "Admin Sekolah";
             schoolName = userDoc.get('schoolName') ?? "Nama Sekolah Anda";
-            // Check for 'schoolVerificationStatus' if it exists, otherwise use 'isSchoolVerified'
-            isSchoolVerified = userDoc.get('schoolVerificationStatus') == 'Menunggu Verifikasi' ||
-                userDoc.get('isSchoolVerified') == true;
             profileImageUrl =
                 (userDoc.data() as Map<String, dynamic>?)?['profilePictureUrl']
                     as String?;
@@ -85,10 +132,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       } catch (e) {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            SnackBar(
-              content: Text("Gagal memuat profil admin: $e"),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text("Gagal memuat profil admin: $e"), backgroundColor: Colors.red),
           );
         }
       }
@@ -114,9 +158,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(
-              content: Text("Pengguna tidak terautentikasi."),
-              backgroundColor: Colors.red,
-            ),
+                content: Text("Pengguna tidak terautentikasi."),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -150,17 +193,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         userProvider.updateProfilePictureUrl(downloadUrl);
         ScaffoldMessenger.of(currentContext).showSnackBar(
           const SnackBar(
-            content: Text("Foto profil berhasil diunggah!"),
-            backgroundColor: Colors.green,
-          ),
+              content: Text("Foto profil berhasil diunggah!"),
+              backgroundColor: Colors.green),
         );
       } catch (e) {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
             SnackBar(
-              content: Text("Gagal mengunggah foto: $e"),
-              backgroundColor: Colors.red,
-            ),
+                content: Text("Gagal mengunggah foto: $e"),
+                backgroundColor: Colors.red),
           );
         }
       }
@@ -172,38 +213,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final currentContext = context;
     final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
     String? uid = userProvider.uid;
-    String? schoolId = userProvider.schoolId; // Assuming schoolId exists in UserProvider
+    String? schoolId = userProvider.schoolId;
+    String? currentSchoolName = userProvider.schoolName; // assuming schoolName is in UserProvider or fetched
 
-    if (uid == null || schoolId == null) {
+    if (uid == null || schoolId == null || currentSchoolName == null) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("ID Admin atau Sekolah tidak ditemukan."), backgroundColor: Colors.red),
+          const SnackBar(content: Text("ID Admin, Sekolah, atau Nama Sekolah tidak ditemukan. Pastikan Anda sudah terdaftar sebagai Admin Sekolah dengan nama sekolah."), backgroundColor: Colors.red),
         );
       }
       return;
     }
 
     try {
-      // Admin submits a verification request to Dinas Pendidikan.
-      // The 'isSchoolVerified' status will be changed by Dinas later.
-      // Here, we just mark that the Admin has submitted the request.
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'schoolVerificationStatus': 'Menunggu Verifikasi', // New status in Admin profile
-        'verificationRequestedAt': Timestamp.now(),
-      });
+      // Check if a pending request already exists
+      QuerySnapshot existingRequest = await FirebaseFirestore.instance.collection('schoolVerificationRequests')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('status', isEqualTo: 'pending')
+          .limit(1)
+          .get();
 
-      // Optional: Create a document in a 'schoolVerificationRequests' collection
-      // if Dinas needs to see them separately.
-      // await FirebaseFirestore.instance.collection('schoolVerificationRequests').add({
-      //   'schoolId': schoolId,
-      //   'adminId': uid,
-      //   'status': 'pending',
-      //   'requestedAt': Timestamp.now(),
-      // });
+      if (existingRequest.docs.isNotEmpty) {
+        if (currentContext.mounted) {
+          ScaffoldMessenger.of(currentContext).showSnackBar(
+            const SnackBar(content: Text("Permintaan verifikasi sudah ada dan sedang menunggu proses."), backgroundColor: Colors.orange),
+          );
+        }
+        return;
+      }
+
+
+      // Admin submits a verification request to Dinas Pendidikan.
+      await FirebaseFirestore.instance.collection('schoolVerificationRequests').add({
+        'schoolId': schoolId,
+        'schoolName': currentSchoolName,
+        'adminUserId': uid,
+        'adminName': adminName, // Using the fetched adminName
+        'status': 'pending', // Initial status
+        'requestedAt': Timestamp.now(),
+      });
 
       if (!currentContext.mounted) return;
       setState(() {
-        isSchoolVerified = true; // 'true' now means a request has been sent
+        schoolVerificationStatus = 'pending'; // Update local status for UI
       });
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -279,6 +331,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final userProvider = Provider.of<UserProvider>(context);
     final currentProfileImage = profileImageUrl ?? userProvider.profilePictureUrl;
 
+    // Determine the color for school verification status
+    Color verificationColor;
+    IconData verificationIcon;
+    String verificationMessage;
+
+    if (isSchoolVerified) {
+      verificationColor = Colors.green.shade100;
+      verificationIcon = Icons.check_circle;
+      verificationMessage = "Sekolah Terverifikasi";
+    } else if (schoolVerificationStatus == 'pending') {
+      verificationColor = Colors.orange.shade100;
+      verificationIcon = Icons.pending;
+      verificationMessage = "Menunggu Verifikasi";
+    } else if (schoolVerificationStatus == 'rejected') {
+      verificationColor = Colors.red.shade100;
+      verificationIcon = Icons.cancel;
+      verificationMessage = "Verifikasi Ditolak";
+    } else {
+      // "Belum Mengajukan" or initial state
+      verificationColor = Colors.blue.shade100;
+      verificationIcon = Icons.gpp_maybe;
+      verificationMessage = "Ajukan Verifikasi";
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -348,7 +424,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           const SizedBox(height: 20),
 
-          // School Verification
+          // School Verification Section
           const Text("Verifikasi Sekolah", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
@@ -368,34 +444,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               const SizedBox(width: 12),
               // Verification Button/Indicator
-              // isSchoolVerified now indicates if a request has been sent
-              isSchoolVerified
-                  ? Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade100, // Yellow for 'Pending Verification'
-                        borderRadius: BorderRadius.circular(12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: verificationColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: isSchoolVerified
+                    ? Tooltip(
+                        message: "Sekolah ini telah diverifikasi oleh Dinas Pendidikan.",
+                        child: Icon(verificationIcon, color: Colors.green.shade800),
+                      )
+                    : IconButton(
+                        icon: Icon(verificationIcon, color: verificationIcon == Icons.gpp_maybe ? Colors.blue.shade800 : (verificationIcon == Icons.pending ? Colors.orange.shade800 : Colors.red.shade800)),
+                        onPressed: schoolVerificationStatus == 'pending' || schoolVerificationStatus == 'approved'
+                            ? null // Disable if pending or already approved
+                            : _requestSchoolVerification, // Admin requests verification
                       ),
-                      child: const Tooltip(
-                        // Add Tooltip for explanation
-                        message: "Permintaan verifikasi telah dikirim ke Dinas Pendidikan.",
-                        child: Icon(Icons.pending, color: Colors.orange),
-                      ),
-                    )
-                  : Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.gpp_maybe,
-                            color: Colors.blue), // Icon to request verification
-                        onPressed: _requestSchoolVerification, // Admin requests verification
-                      ),
-                    ),
+              ),
             ],
           ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              verificationMessage,
+              style: TextStyle(
+                color: verificationIcon == Icons.gpp_maybe ? Colors.blue.shade800 : (verificationIcon == Icons.pending ? Colors.orange.shade800 : (verificationIcon == Icons.cancel ? Colors.red.shade800 : Colors.green.shade800)),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+
 
           const SizedBox(height: 24),
 

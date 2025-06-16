@@ -18,7 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  // schoolController akan digunakan untuk Nama Sekolah atau NIS Anak secara kondisional
+  // schoolNisInputController akan digunakan untuk Nama Sekolah atau NIS Anak secara kondisional
   final TextEditingController schoolNisInputController = TextEditingController();
 
   final passwordController = TextEditingController();
@@ -78,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 32),
               _buildPrimaryButton("Selanjutnya", () {
                 if (fullNameController.text.isEmpty || emailController.text.isEmpty ||
-                    phoneController.text.isEmpty) { // schoolController tidak lagi divalidasi di step 1
+                    phoneController.text.isEmpty) { // schoolNisInputController tidak lagi divalidasi di step 1
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Harap lengkapi semua data pribadi!"), backgroundColor: Colors.red),
                   );
@@ -127,7 +127,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   return;
                 }
 
-
                 if (passwordController.text != confirmPasswordController.text) {
                   ScaffoldMessenger.of(currentContext).showSnackBar(
                     const SnackBar(content: Text("Password dan konfirmasi password tidak sama!"), backgroundColor: Colors.red),
@@ -151,26 +150,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     'profilePictureUrl': '', // Default kosong
                   };
 
+                  String? schoolIdToLink; // Temporary variable for school ID
+
                   if (selectedRole == 'Admin Sekolah') {
                     userData['schoolName'] = schoolNisInputController.text.trim(); // Gunakan controller baru
-                    userData['isSchoolVerified'] = false; // Default: belum diverifikasi oleh Dinas
+                    // userData['isSchoolVerified'] = false; // Default: belum diverifikasi oleh Dinas - INI AKAN DITENTUKAN OLEH DINAS
 
                     // Buat dokumen sekolah baru di koleksi 'schools'
                     DocumentReference schoolRef = await FirebaseFirestore.instance.collection('schools').add({
                       'schoolName': schoolNisInputController.text.trim(), // Gunakan controller baru
                       'address': '',
                       'adminUserId': userCredential.user!.uid,
-                      'isVerified': false,
+                      'isVerified': false, // Sekolah belum diverifikasi saat pertama dibuat
                       'registeredAt': Timestamp.now(),
                     });
-                    userData['schoolId'] = schoolRef.id; // Simpan ID sekolah di profil Admin
+                    schoolIdToLink = schoolRef.id; // Simpan ID sekolah
+                    userData['schoolId'] = schoolIdToLink; // Simpan ID sekolah di profil Admin
+
+                    // Secara opsional, buat permintaan verifikasi di koleksi baru
+                    await FirebaseFirestore.instance.collection('schoolVerificationRequests').add({
+                      'schoolId': schoolIdToLink,
+                      'schoolName': schoolNisInputController.text.trim(),
+                      'adminUserId': userCredential.user!.uid,
+                      'adminName': fullNameController.text.trim(),
+                      'status': 'pending', // Status permintaan awal
+                      'requestedAt': Timestamp.now(),
+                    });
+
                   } else if (selectedRole == 'Guru') {
                     userData['schoolName'] = schoolNisInputController.text.trim(); // Simpan nama sekolah untuk guru
                     // Opsional: Anda bisa mencari schoolId dari koleksi 'schools' jika sekolahnya sudah ada
                     QuerySnapshot schoolSnap = await FirebaseFirestore.instance.collection('schools')
-                        .where('schoolName', isEqualTo: schoolNisInputController.text.trim()).limit(1).get();
+                        .where('schoolName', isEqualTo: schoolNisInputController.text.trim())
+                        .limit(1)
+                        .get();
                     if(schoolSnap.docs.isNotEmpty){
-                        userData['schoolId'] = schoolSnap.docs.first.id;
+                        schoolIdToLink = schoolSnap.docs.first.id;
+                        userData['schoolId'] = schoolIdToLink;
                     } else {
                         userData['schoolId'] = null; // Atau ID sekolah dummy/invalid jika tidak ditemukan
                         if (currentContext.mounted) {
@@ -238,7 +254,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       TextSpan(
                         text: 'Masuk',
-                        style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -319,10 +338,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               setState(() {
                 selectedRole = value;
                 schoolNisInputController.clear(); // Bersihkan input saat role berubah
-                // Set keyboardType berdasarkan role
+                // Set keyboardType berdasarkan role,
                 if (value == 'Orang Tua') {
-                    // Jika Anda ingin mengubah keyboardType
-                    // _buildField harus menerima keyboardType sebagai parameter
+                  // Jika Anda ingin mengubah keyboardType,
+                  // _buildField harus menerima keyboardType sebagai parameter,
                 }
               });
             },

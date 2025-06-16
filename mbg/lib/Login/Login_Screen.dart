@@ -132,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           String? storedRole = userDoc.get('role');
                           String? fullName = userDoc.get('fullName');
                           String? schoolId = userDoc.get('schoolId');
+                          String? schoolName = userDoc.get('schoolName'); // Fetch schoolName
                           String? profilePictureUrl = userDoc.get('profilePictureUrl');
                           bool? isApproved = userDoc.get('isApproved'); // Untuk Orang Tua
                           List<String> childIds = List<String>.from(userDoc.get('childIds') ?? []); // Untuk Orang Tua
@@ -144,6 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   storedRole!,
                                   fullName: fullName,
                                   schoolId: schoolId,
+                                  schoolName: schoolName, // Pass schoolName
                                   profilePictureUrl: profilePictureUrl,
                                   isApproved: isApproved,
                                   childIds: childIds,

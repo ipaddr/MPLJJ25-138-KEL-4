@@ -6,6 +6,7 @@ class UserProvider with ChangeNotifier {
   String _role = '';
   String? _fullName;
   String? _schoolId; // Untuk Admin, Guru, Tim Katering (jika terhubung ke sekolah)
+  String? _schoolName; // Added to store school name for admin
   String? _profilePictureUrl;
   bool? _isApproved; // Untuk Orang Tua
   List<String>? _childIds; // Untuk Orang Tua
@@ -15,16 +16,18 @@ class UserProvider with ChangeNotifier {
   String get role => _role;
   String? get fullName => _fullName;
   String? get schoolId => _schoolId;
+  String? get schoolName => _schoolName; // Getter for schoolName
   String? get profilePictureUrl => _profilePictureUrl;
   bool? get isApproved => _isApproved;
   List<String>? get childIds => _childIds;
 
-  void setUser(String? uid, String? email, String role, {String? fullName, String? schoolId, String? profilePictureUrl, bool? isApproved, List<String>? childIds}) {
+  void setUser(String? uid, String? email, String role, {String? fullName, String? schoolId, String? schoolName, String? profilePictureUrl, bool? isApproved, List<String>? childIds}) {
     _uid = uid;
     _email = email;
     _role = role;
     _fullName = fullName;
     _schoolId = schoolId;
+    _schoolName = schoolName; // Set schoolName
     _profilePictureUrl = profilePictureUrl;
     _isApproved = isApproved;
     _childIds = childIds;
@@ -37,6 +40,7 @@ class UserProvider with ChangeNotifier {
     _role = '';
     _fullName = null;
     _schoolId = null;
+    _schoolName = null; // Clear schoolName
     _profilePictureUrl = null;
     _isApproved = null;
     _childIds = null;
