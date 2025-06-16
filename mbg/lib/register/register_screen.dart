@@ -18,9 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  final schoolController = TextEditingController(); // Digunakan untuk nama sekolah/NIS anak
+  // schoolController akan digunakan untuk Nama Sekolah atau NIS Anak secara kondisional
+  final TextEditingController schoolNisInputController = TextEditingController();
 
-  // final usernameController = TextEditingController(); // Ini bisa dihapus jika tidak digunakan
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
@@ -34,6 +34,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? selectedRole;
 
   @override
+  void dispose() {
+    fullNameController.dispose();
+    emailController.dispose();
+    phoneController.dispose();
+    schoolNisInputController.dispose(); // Dispose controller baru
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
@@ -41,39 +52,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         toolbarHeight: 0,
+        leading: step == 2 // Tampilkan tombol kembali jika di step 2
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => step = 1),
+              )
+            : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
+            Center(
               child: Text(
-                "Buat Akun",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                step == 1 ? "Informasi Pribadi" : "Buat Akun & Role", // Ubah judul per step
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 24),
             if (step == 1) ...[
               _buildField("Nama Lengkap", "Isi nama lengkap", fullNameController),
               _buildField("Email", "your@email.com", emailController),
-              _buildField("No. Handphone", "012345678901", phoneController), // Contoh format
-              _buildField("Asal Sekolah / NIS Anak", "Isi nama sekolah atau NIS anak", schoolController),
+              _buildField("No. Handphone", "012345678901", phoneController),
               const SizedBox(height: 32),
               _buildPrimaryButton("Selanjutnya", () {
                 if (fullNameController.text.isEmpty || emailController.text.isEmpty ||
-                    phoneController.text.isEmpty || schoolController.text.isEmpty) {
+                    phoneController.text.isEmpty) { // schoolController tidak lagi divalidasi di step 1
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Harap lengkapi semua data pada bagian ini!"), backgroundColor: Colors.red),
+                    const SnackBar(content: Text("Harap lengkapi semua data pribadi!"), backgroundColor: Colors.red),
                   );
                   return;
                 }
                 setState(() => step = 2);
               }),
-            ] else ...[
+            ] else ...[ // Ini adalah step 2
               _buildPasswordField("Password", passwordController, showPassword, () => setState(() => showPassword = !showPassword)),
               _buildPasswordField("Konfirmasi Password", confirmPasswordController, showConfirmPassword, () => setState(() => showConfirmPassword = !showConfirmPassword)),
               _buildRoleDropdown(), // Dropdown for role selection
+              const SizedBox(height: 20),
+
+              // KONDISIONAL INPUT FIELD BERDASARKAN ROLE
+              if (selectedRole == 'Admin Sekolah' || selectedRole == 'Guru' || selectedRole == 'Tim Katering')
+                _buildField("Nama Sekolah", "Isi nama sekolah", schoolNisInputController)
+              else if (selectedRole == 'Orang Tua')
+                _buildField("NIS Anak", "Masukkan NIS anak", schoolNisInputController) // schoolNisInputController untuk NIS anak
+              else if (selectedRole == 'Dinas Pendidikan')
+                _buildField("Nama Dinas", "Isi nama dinas", schoolNisInputController), // schoolNisInputController untuk Nama Dinas
+
               const SizedBox(height: 32),
               _buildPrimaryButton("Buat Akun", () async {
                 final currentContext = context;
@@ -84,6 +110,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   );
                   return;
                 }
+
+                // Validasi field kondisional
+                if ((selectedRole == 'Admin Sekolah' || selectedRole == 'Guru' || selectedRole == 'Tim Katering' || selectedRole == 'Orang Tua' || selectedRole == 'Dinas Pendidikan') && schoolNisInputController.text.isEmpty) {
+                  String fieldLabel = '';
+                  if (selectedRole == 'Admin Sekolah' || selectedRole == 'Guru' || selectedRole == 'Tim Katering') {
+                    fieldLabel = 'Nama Sekolah';
+                  } else if (selectedRole == 'Orang Tua') {
+                    fieldLabel = 'NIS Anak';
+                  } else if (selectedRole == 'Dinas Pendidikan') {
+                    fieldLabel = 'Nama Dinas';
+                  }
+                  ScaffoldMessenger.of(currentContext).showSnackBar(
+                    SnackBar(content: Text("Harap isi $fieldLabel."), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
+
 
                 if (passwordController.text != confirmPasswordController.text) {
                   ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -109,28 +152,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   };
 
                   if (selectedRole == 'Admin Sekolah') {
-                    userData['schoolName'] = schoolController.text.trim();
+                    userData['schoolName'] = schoolNisInputController.text.trim(); // Gunakan controller baru
                     userData['isSchoolVerified'] = false; // Default: belum diverifikasi oleh Dinas
 
                     // Buat dokumen sekolah baru di koleksi 'schools'
                     DocumentReference schoolRef = await FirebaseFirestore.instance.collection('schools').add({
-                      'schoolName': schoolController.text.trim(),
-                      'address': '', // Tambahkan field alamat jika ada
+                      'schoolName': schoolNisInputController.text.trim(), // Gunakan controller baru
+                      'address': '',
                       'adminUserId': userCredential.user!.uid,
-                      'isVerified': false, // Status verifikasi oleh Dinas Pendidikan
+                      'isVerified': false,
                       'registeredAt': Timestamp.now(),
                     });
                     userData['schoolId'] = schoolRef.id; // Simpan ID sekolah di profil Admin
                   } else if (selectedRole == 'Guru') {
-                    userData['schoolId'] = schoolController.text.trim(); // Untuk sementara anggap schoolController berisi schoolId/name
+                    userData['schoolName'] = schoolNisInputController.text.trim(); // Simpan nama sekolah untuk guru
+                    // Opsional: Anda bisa mencari schoolId dari koleksi 'schools' jika sekolahnya sudah ada
+                    QuerySnapshot schoolSnap = await FirebaseFirestore.instance.collection('schools')
+                        .where('schoolName', isEqualTo: schoolNisInputController.text.trim()).limit(1).get();
+                    if(schoolSnap.docs.isNotEmpty){
+                        userData['schoolId'] = schoolSnap.docs.first.id;
+                    } else {
+                        userData['schoolId'] = null; // Atau ID sekolah dummy/invalid jika tidak ditemukan
+                        if (currentContext.mounted) {
+                            ScaffoldMessenger.of(currentContext).showSnackBar(
+                                const SnackBar(content: Text("Nama sekolah tidak ditemukan. Guru perlu didaftarkan ke sekolah yang sudah ada."), backgroundColor: Colors.orange),
+                            );
+                        }
+                    }
                   } else if (selectedRole == 'Orang Tua') {
+                    userData['childNisRequest'] = schoolNisInputController.text.trim(); // NIS yang diajukan oleh ortu
                     userData['isApproved'] = false; // Default: belum disetujui
                     userData['childIds'] = []; // Default: belum ada anak terhubung
-                    userData['childNisRequest'] = schoolController.text.trim(); // NIS yang diajukan oleh ortu
                   } else if (selectedRole == 'Dinas Pendidikan') {
-                    userData['dinasName'] = fullNameController.text.trim(); // Atau nama dinas
+                    userData['dinasName'] = schoolNisInputController.text.trim(); // Atau nama dinas
                   }
-                  // Tim Katering tidak memerlukan tambahan field khusus saat registrasi ini
+                  // Tim Katering tidak perlu tambahan field khusus saat registrasi ini
+                  // Jika Tim Katering juga terhubung ke sekolah, Anda bisa tambahkan schoolId seperti Guru
 
                   await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
 
@@ -194,7 +251,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(String label, String hint, TextEditingController controller) {
+  Widget _buildField(String label, String hint, TextEditingController controller, {TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -204,6 +261,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: controller,
+            keyboardType: keyboardType, // Gunakan keyboardType
             decoration: InputDecoration(
               hintText: hint,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -260,6 +318,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onChanged: (value) {
               setState(() {
                 selectedRole = value;
+                schoolNisInputController.clear(); // Bersihkan input saat role berubah
+                // Set keyboardType berdasarkan role
+                if (value == 'Orang Tua') {
+                    // Jika Anda ingin mengubah keyboardType
+                    // _buildField harus menerima keyboardType sebagai parameter
+                }
               });
             },
           ),
