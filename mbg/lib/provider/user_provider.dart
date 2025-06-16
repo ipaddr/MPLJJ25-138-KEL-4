@@ -55,10 +55,8 @@ class UserProvider with ChangeNotifier {
 
   // Metode baru untuk menambah/menghapus childId dari daftar Orang Tua
   void addChildId(String childId) {
-    if (_childIds == null) {
-      _childIds = [];
-    }
-    if (!_childIds!.contains(childId)) { // Perbaikan: Tambah '!' karena _childIds sudah dipastikan tidak null
+    _childIds ??= []; // <<< PERBAIKAN DI SINI: Menggunakan null-aware assignment
+    if (!_childIds!.contains(childId)) {
       _childIds!.add(childId);
       notifyListeners();
     }
