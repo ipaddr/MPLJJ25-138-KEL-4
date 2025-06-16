@@ -129,13 +129,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (!currentContext.mounted) return;
 
                         if (userDoc.exists) {
-                          String? storedRole = userDoc.get('role');
-                          String? fullName = userDoc.get('fullName');
-                          String? schoolId = userDoc.get('schoolId');
-                          String? schoolName = userDoc.get('schoolName'); // Fetch schoolName
-                          String? profilePictureUrl = userDoc.get('profilePictureUrl');
-                          bool? isApproved = userDoc.get('isApproved'); // Untuk Orang Tua
-                          List<String> childIds = List<String>.from(userDoc.get('childIds') ?? []); // Untuk Orang Tua
+                          // DEFINE userDataMap DI SINI
+                          final userDataMap = userDoc.data() as Map<String, dynamic>?;
+
+                          String? storedRole = userDataMap?['role'];
+                          String? fullName = userDataMap?['fullName'];
+                          String? schoolId = userDataMap?['schoolId'];
+                          String? schoolName = userDataMap?['schoolName'];
+                          String? profilePictureUrl = userDataMap?['profilePictureUrl'];
+                          bool? isApproved = userDataMap?['isApproved'] ?? false; // Menggunakan ?? false untuk default
+                          List<String> childIds = List<String>.from(userDataMap?['childIds'] ?? []);
 
                           if (storedRole == selectedRole) {
                             Provider.of<UserProvider>(currentContext, listen: false)
@@ -145,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   storedRole!,
                                   fullName: fullName,
                                   schoolId: schoolId,
-                                  schoolName: schoolName, // Pass schoolName
+                                  schoolName: schoolName,
                                   profilePictureUrl: profilePictureUrl,
                                   isApproved: isApproved,
                                   childIds: childIds,
