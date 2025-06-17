@@ -16,6 +16,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   final TextEditingController nisController = TextEditingController();
   final TextEditingController sekolahController = TextEditingController();
 
+  // Variabel untuk melacak status permintaan yang tertunda
+  Map<String, dynamic>? _pendingRequest;
+
   String parentName = "Nama Orang Tua";
   bool isApproved = false; // Status persetujuan dari Admin
   List<String> childIds = []; // ID siswa yang terhubung
@@ -25,9 +28,30 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   @override
   void initState() {
     super.initState();
+    // Gabungkan semua logika inisialisasi ke dalam satu initState()
     _fetchParentProfile();
-    // Jika sudah disetujui, langsung fetch data anak
-    // _fetchChildData(); // Ini akan dipanggil setelah isApproved
+    _listenToPendingRequests(); // Panggil listener baru untuk memantau status permintaan
+    // _fetchChildData() akan dipanggil di dalam _fetchParentProfile jika isApproved dan childIds sudah ada
+  }
+
+  void _listenToPendingRequests() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    String? parentUid = userProvider.uid;
+
+    if (parentUid == null) return;
+
+    FirebaseFirestore.instance
+        .collection('parentApprovalRequests')
+        .where('parentId', isEqualTo: parentUid)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      setState(() {
+        // Gunakan data() tanpa cast eksplisit jika tipe data sudah jelas (Dart akan infer)
+        _pendingRequest = snapshot.docs.isNotEmpty ? snapshot.docs.first.data() : null;
+      });
+    });
   }
 
   Future<void> _fetchParentProfile() async {
@@ -135,6 +159,19 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text("Permintaan akses berhasil dikirim! Menunggu persetujuan Admin Sekolah."), backgroundColor: Colors.green),
       );
+      // Setelah mengirim permintaan, update status lokal agar UI langsung berubah
+      setState(() {
+        _pendingRequest = {
+          'parentId': parentUid,
+          'childNis': nisController.text.trim(),
+          'childId': studentIdToRequest,
+          'schoolName': sekolahController.text.trim(),
+          'schoolId': schoolIdOfStudent,
+          'status': 'pending',
+          'requestedAt': Timestamp.now(),
+        };
+      });
+
     } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -153,7 +190,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
 
       if (childDoc.exists) {
         setState(() {
-          childProfile = childDoc.data() as Map<String, dynamic>;
+          childProfile = childDoc.data() as Map<String, dynamic>; // Pertahankan cast jika Anda yakin tipenya Map<String, dynamic>
         });
 
         // Ambil data konsumsi harian anak
@@ -217,12 +254,13 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
               const SizedBox(height: 40),
 
               // Tampilan utama berdasarkan status persetujuan
-              if (!userProvider.isApproved!) // Menggunakan isApproved dari UserProvider
-                _buildApprovalRequestForm()
-              else if (userProvider.childIds!.isEmpty) // Jika disetujui tapi belum ada anak terdaftar
+              // Menggunakan _buildApprovalRequestFormWithDynamicStatus untuk menampilkan pesan dinamis
+              if (!userProvider.isApproved!)
+                _buildApprovalRequestFormWithDynamicStatus()
+              else if (userProvider.childIds!.isEmpty)
                 _buildNoChildFound()
-              else // Jika disetujui dan ada anak
-                _buildChildDashboard(userProvider.childIds![0]), // Menampilkan anak pertama
+              else
+                _buildChildDashboard(userProvider.childIds![0]),
             ],
           ),
         ),
@@ -230,8 +268,8 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     );
   }
 
-  // Form pengajuan akses
-  Widget _buildApprovalRequestForm() {
+  // Form pengajuan akses dengan status dinamis
+  Widget _buildApprovalRequestFormWithDynamicStatus() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -274,7 +312,20 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
           ),
         ),
         const SizedBox(height: 20),
-        const Center(child: Text("Status: Menunggu konfirmasi admin sekolah...", style: TextStyle(color: Colors.orange))),
+        Center(
+          // Gunakan _pendingRequest untuk menampilkan status dinamis
+          child: _pendingRequest != null
+              ? Text(
+                  "Status: Menunggu konfirmasi admin sekolah untuk NIS ${_pendingRequest!['childNis']}...",
+                  style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                )
+              : const Text(
+                  "Status: Silakan ajukan akses data anak Anda.", // Pesan default jika tidak ada permintaan tertunda
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+        ),
       ],
     );
   }
@@ -286,14 +337,12 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         Text("Anda sudah disetujui, tetapi belum ada data anak yang terhubung.", style: TextStyle(fontSize: 16)),
         SizedBox(height: 10),
         Text("Pastikan NIS anak Anda sudah terdaftar oleh Admin Sekolah.", style: TextStyle(fontSize: 14, color: Colors.grey)),
-        // Tambahkan tombol untuk mengajukan lagi atau refresh jika perlu
       ],
     );
   }
 
   // Dashboard anak (setelah disetujui dan anak terhubung)
   Widget _buildChildDashboard(String childId) {
-    // Pastikan childProfile sudah dimuat
     if (childProfile == null) {
       _fetchChildData(childId); // Coba muat ulang jika null
       return const Center(child: CircularProgressIndicator());
@@ -303,7 +352,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     final String childClass = childProfile?['kelas'] ?? 'N/A';
     final String childNisDisplay = childProfile?['nis'] ?? 'N/A';
 
-    final todayFormatted = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(DateTime.now());
+    final todayFormatted = DateFormat('EEEE, d MMMM', 'id_ID').format(DateTime.now());
     final statusMakanPagi = childDailyConsumption[childId]?['makanPagi'] ?? false;
     final statusMakanSiang = childDailyConsumption[childId]?['makanSiang'] ?? false;
 
@@ -328,9 +377,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         // Tambahan: Ringkasan Nilai Akademik atau Penilaian Pemahaman
         const Text("Ringkasan Akademik", style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        // Ini akan memerlukan query data dari 'academicEvaluations' atau 'understandingAssessments'
-        // untuk anak ini dan ditampilkan di sini.
-        // Untuk sederhana, Anda bisa tampilkan pesan dummy atau nilai rata-rata dari data anak
         const Text("Nilai Akademik Terakhir: 85 (Baik)", style: TextStyle(color: Colors.black54)),
         const Text("Penilaian Fokus: Meningkat", style: TextStyle(color: Colors.black54)),
 

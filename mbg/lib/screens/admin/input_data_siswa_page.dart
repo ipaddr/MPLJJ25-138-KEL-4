@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart'; // Tambahkan ini
+import '../../provider/user_provider.dart'; // Tambahkan ini
 
 class InputDataSiswaPage extends StatelessWidget {
   const InputDataSiswaPage({super.key});
@@ -75,12 +77,31 @@ class InputDataSiswaPage extends StatelessWidget {
                   context,
                   "Simpan",
                   onTap: () async {
-                    final currentContext = context;
+                    // Deklarasikan dan inisialisasikan currentContext di sini
+                    final BuildContext currentContext = context;
+
+                    final userProvider = Provider.of<UserProvider>(
+                      currentContext,
+                      listen: false,
+                    );
+                    final String? adminSchoolId = userProvider.schoolId;
+
+                    if (adminSchoolId == null) {
+                      ScaffoldMessenger.of(currentContext).showSnackBar( 
+                        const SnackBar(
+                          content: Text(
+                            "ID Sekolah Admin tidak ditemukan. Gagal menyimpan siswa.",
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
 
                     if (namaController.text.isEmpty ||
                         kelasController.text.isEmpty ||
                         nisController.text.isEmpty) {
-                      ScaffoldMessenger.of(currentContext).showSnackBar(
+                      ScaffoldMessenger.of(currentContext).showSnackBar( 
                         const SnackBar(
                           content: Text(
                             "Harap isi semua kolom informasi umum!",
@@ -92,31 +113,34 @@ class InputDataSiswaPage extends StatelessWidget {
                     }
 
                     try {
-                      await FirebaseFirestore.instance.collection('students').add({
-                        'nama': namaController.text.trim(),
-                        'kelas': kelasController.text.trim(),
-                        'nis': nisController.text.trim(),
-                        'keterangan': keteranganController.text.trim(),
-                        'createdAt': Timestamp.now(),
-                      });
+                      await FirebaseFirestore.instance
+                          .collection('students')
+                          .add({
+                            'nama': namaController.text.trim(), 
+                            'kelas': kelasController.text.trim(), 
+                            'nis': nisController.text.trim(), 
+                            'keterangan': keteranganController.text.trim(), 
+                            'createdAt': Timestamp.now(), 
+                            'schoolId': adminSchoolId, // Ini adalah penambahan yang diperlukan 
+                          });
 
-                      if (!currentContext.mounted) return;
+                      if (!currentContext.mounted) return; 
 
-                      namaController.clear();
-                      kelasController.clear();
-                      nisController.clear();
-                      keteranganController.clear();
+                      namaController.clear(); 
+                      kelasController.clear(); 
+                      nisController.clear(); 
+                      keteranganController.clear(); 
 
-                      ScaffoldMessenger.of(currentContext).showSnackBar(
+                      ScaffoldMessenger.of(currentContext).showSnackBar( 
                         const SnackBar(
                           content: Text("Data siswa berhasil disimpan!"),
                           backgroundColor: Colors.green,
                         ),
                       );
                     } catch (e) {
-                      if (!currentContext.mounted) return;
+                      if (!currentContext.mounted) return; 
 
-                      ScaffoldMessenger.of(currentContext).showSnackBar(
+                      ScaffoldMessenger.of(currentContext).showSnackBar( 
                         SnackBar(
                           content: Text("Gagal menyimpan data: $e"),
                           backgroundColor: Colors.red,
@@ -133,6 +157,7 @@ class InputDataSiswaPage extends StatelessWidget {
     );
   }
 
+  // Widget helper untuk input field
   Widget _buildInput(
     String label,
     TextEditingController controller, {
@@ -143,18 +168,18 @@ class InputDataSiswaPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)), 
+          const SizedBox(height: 6), 
           TextField(
-            controller: controller,
-            maxLines: isMultiline ? 4 : 1,
+            controller: controller, 
+            maxLines: isMultiline ? 4 : 1, 
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 14,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10), 
               ),
             ),
           ),
@@ -163,17 +188,18 @@ class InputDataSiswaPage extends StatelessWidget {
     );
   }
 
+  // Widget helper untuk tombol bulat
   Widget _buildRoundedButton(
-    BuildContext context,
+    BuildContext context, // context diteruskan dari build method utama 
     String text, {
     required VoidCallback onTap,
   }) {
     return Container(
-      width: 140,
-      height: 48,
+      width: 140, 
+      height: 48, 
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black, width: 1),
-        color: const Color(0xFF2962FF),
+        border: Border.all(color: Colors.black, width: 1), 
+        color: const Color(0xFF2962FF), 
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextButton(
