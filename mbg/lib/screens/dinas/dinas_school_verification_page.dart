@@ -89,15 +89,13 @@ class _DinasSchoolVerificationPageState extends State<DinasSchoolVerificationPag
   Future<void> _processSchoolVerification(String requestId, String schoolId, String status) async {
     final currentContext = context;
     try {
-      // Update status in schoolVerificationRequests
       await FirebaseFirestore.instance.collection('schoolVerificationRequests').doc(requestId).update({
         'status': status,
         'processedAt': Timestamp.now(),
       });
 
-      // Update isVerified in the actual schools collection
       await FirebaseFirestore.instance.collection('schools').doc(schoolId).update({
-        'isVerified': status == 'approved', // Set to true if approved, false otherwise
+        'isVerified': status == 'approved',
       });
 
       if (!currentContext.mounted) return;

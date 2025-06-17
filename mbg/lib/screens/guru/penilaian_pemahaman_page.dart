@@ -47,10 +47,9 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
         return;
       }
 
-      // Fetch students belonging to the teacher's school
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
           .collection('students')
-          .where('schoolId', isEqualTo: guruSchoolId) // Filter students by schoolId
+          .where('schoolId', isEqualTo: guruSchoolId)
           .get();
 
       if (!mounted) return;
@@ -60,11 +59,11 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
               'id': doc.id,
               'nama': doc.get('nama') ?? 'Nama Tidak Diketahui',
             }).toList();
-        _filterAssessedStudents(); // Filter students who already have an assessment for today
+        _filterAssessedStudents();
         if (students.isNotEmpty) {
           selectedStudentId = students.first['id'];
         } else {
-          selectedStudentId = null; // No students left to assess
+          selectedStudentId = null;
         }
       });
     } catch (e) {
@@ -118,7 +117,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
     setState(() {
       nilai.forEach((key, value) => nilai[key] = 0);
       _komentarController.clear();
-      // The selected student will be updated by _filterAssessedStudents
     });
   }
 
@@ -171,7 +169,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
               Expanded(
                 child: ListView(
                   children: [
-                    ...nilai.keys.map((kriteria) { // Hapus .toList() di sini
+                    ...nilai.keys.map((kriteria) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -205,7 +203,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {
-                        // Controller secara langsung memanage value, tidak perlu update string `komentar` di sini
                       },
                     ),
                     const SizedBox(height: 20),
@@ -250,7 +247,6 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         return;
                       }
 
-                      // Simpan penilaian ke understandingAssessments
                       await FirebaseFirestore.instance.collection('understandingAssessments').add({
                         'studentId': selectedStudentId,
                         'teacherId': guruUid,
@@ -261,12 +257,11 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                         'kecepatanMemahami': nilai['Kecepatan memahami'],
                         'komentarGuru': _komentarController.text,
                       });
-
-                      // Simpan komentar guru ke koleksi teacherComments
+                    
                       if (_komentarController.text.isNotEmpty) {
                         await FirebaseFirestore.instance.collection('teacherComments').add({
                           'teacherId': guruUid,
-                          'teacherName': guruFullName ?? "Guru", // Use full name if available
+                          'teacherName': guruFullName ?? "Guru",
                           'schoolId': guruSchoolId,
                           'studentId': selectedStudentId,
                           'comment': _komentarController.text,
@@ -281,7 +276,7 @@ class _PenilaianPemahamanPageState extends State<PenilaianPemahamanPage> {
                       );
 
                       _resetForm();
-                      await _fetchStudents(); // Refresh student list
+                      await _fetchStudents();
                     } catch (e) {
                       if (!currentContext.mounted) return;
                       ScaffoldMessenger.of(currentContext).showSnackBar(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart'; // Tambahkan ini
-import '../../provider/user_provider.dart'; // Tambahkan ini
+import 'package:provider/provider.dart';
+import '../../provider/user_provider.dart';
 
 class InputDataSiswaPage extends StatelessWidget {
   const InputDataSiswaPage({super.key});
@@ -77,7 +77,6 @@ class InputDataSiswaPage extends StatelessWidget {
                   context,
                   "Simpan",
                   onTap: () async {
-                    // Deklarasikan dan inisialisasikan currentContext di sini
                     final BuildContext currentContext = context;
 
                     final userProvider = Provider.of<UserProvider>(
@@ -121,7 +120,7 @@ class InputDataSiswaPage extends StatelessWidget {
                             'nis': nisController.text.trim(), 
                             'keterangan': keteranganController.text.trim(), 
                             'createdAt': Timestamp.now(), 
-                            'schoolId': adminSchoolId, // Ini adalah penambahan yang diperlukan 
+                            'schoolId': adminSchoolId,
                           });
 
                       if (!currentContext.mounted) return; 
@@ -157,7 +156,6 @@ class InputDataSiswaPage extends StatelessWidget {
     );
   }
 
-  // Widget helper untuk input field
   Widget _buildInput(
     String label,
     TextEditingController controller, {
@@ -188,9 +186,8 @@ class InputDataSiswaPage extends StatelessWidget {
     );
   }
 
-  // Widget helper untuk tombol bulat
   Widget _buildRoundedButton(
-    BuildContext context, // context diteruskan dari build method utama 
+    BuildContext context,
     String text, {
     required VoidCallback onTap,
   }) {

@@ -18,7 +18,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  // schoolNisInputController akan digunakan untuk Nama Sekolah atau NIS Anak secara kondisional
   final TextEditingController schoolNisInputController =
       TextEditingController();
 
@@ -39,7 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     fullNameController.dispose();
     emailController.dispose();
     phoneController.dispose();
-    schoolNisInputController.dispose(); // Dispose controller baru
+    schoolNisInputController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
@@ -55,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         toolbarHeight: 0,
         leading:
             step ==
-                    2 // Tampilkan tombol kembali jika di step 2
+                    2
                 ? IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => setState(() => step = 1),
@@ -71,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Text(
                 step == 1
                     ? "Informasi Pribadi"
-                    : "Buat Akun & Role", // Ubah judul per step
+                    : "Buat Akun & Role",
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -92,7 +91,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (fullNameController.text.isEmpty ||
                     emailController.text.isEmpty ||
                     phoneController.text.isEmpty) {
-                  // schoolNisInputController tidak lagi divalidasi di step 1
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text("Harap lengkapi semua data pribadi!"),
@@ -104,7 +102,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 setState(() => step = 2);
               }),
             ] else ...[
-              // Ini adalah step 2
               _buildPasswordField(
                 "Password",
                 passwordController,
@@ -118,10 +115,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 () =>
                     setState(() => showConfirmPassword = !showConfirmPassword),
               ),
-              _buildRoleDropdown(), // Dropdown for role selection
+              _buildRoleDropdown(),
               const SizedBox(height: 20),
-
-              // KONDISIONAL INPUT FIELD BERDASARKAN ROLE
               if (selectedRole == 'Admin Sekolah' ||
                   selectedRole == 'Guru' ||
                   selectedRole == 'Tim Katering')
@@ -135,13 +130,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   "NIS Anak",
                   "Masukkan NIS anak",
                   schoolNisInputController,
-                ) // schoolNisInputController untuk NIS anak
+                )
               else if (selectedRole == 'Dinas Pendidikan')
                 _buildField(
                   "Nama Dinas",
                   "Isi nama dinas",
                   schoolNisInputController,
-                ), // schoolNisInputController untuk Nama Dinas
+                ),
 
               const SizedBox(height: 32),
               _buildPrimaryButton("Buat Akun", () async {
@@ -156,8 +151,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   );
                   return;
                 }
-
-                // Validasi field kondisional
                 if ((selectedRole == 'Admin Sekolah' ||
                         selectedRole == 'Guru' ||
                         selectedRole == 'Tim Katering' ||
@@ -213,36 +206,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     'email': emailController.text.trim(),
                     'phoneNumber': phoneController.text.trim(),
                     'role': selectedRole,
-                    'profilePictureUrl': '', // Default kosong
+                    'profilePictureUrl': '',
                   };
 
-                  String? schoolIdToLink; // Temporary variable for school ID
+                  String? schoolIdToLink;
 
                   if (selectedRole == 'Admin Sekolah') {
                     userData['schoolName'] =
                         schoolNisInputController.text
-                            .trim(); // Gunakan controller baru
-                    // userData['isSchoolVerified'] = false; // Default: belum diverifikasi oleh Dinas - INI AKAN DITENTUKAN OLEH DINAS
-
-                    // Buat dokumen sekolah baru di koleksi 'schools'
+                            .trim();
                     DocumentReference schoolRef = await FirebaseFirestore
                         .instance
                         .collection('schools')
                         .add({
                           'schoolName':
                               schoolNisInputController.text
-                                  .trim(), // Gunakan controller baru
+                                  .trim(),
                           'address': '',
                           'adminUserId': userCredential.user!.uid,
                           'isVerified':
-                              false, // Sekolah belum diverifikasi saat pertama dibuat
+                              false,
                           'registeredAt': Timestamp.now(),
                         });
-                    schoolIdToLink = schoolRef.id; // Simpan ID sekolah
+                    schoolIdToLink = schoolRef.id;
                     userData['schoolId'] =
-                        schoolIdToLink; // Simpan ID sekolah di profil Admin
-
-                    // Secara opsional, buat permintaan verifikasi di koleksi baru
+                        schoolIdToLink;
                     await FirebaseFirestore.instance
                         .collection('schoolVerificationRequests')
                         .add({
@@ -250,14 +238,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           'schoolName': schoolNisInputController.text.trim(),
                           'adminUserId': userCredential.user!.uid,
                           'adminName': fullNameController.text.trim(),
-                          'status': 'pending', // Status permintaan awal
+                          'status': 'pending',
                           'requestedAt': Timestamp.now(),
                         });
                   } else if (selectedRole == 'Guru') {
                     userData['schoolName'] =
                         schoolNisInputController.text
-                            .trim(); // Simpan nama sekolah untuk guru
-                    // Opsional: Anda bisa mencari schoolId dari koleksi 'schools' jika sekolahnya sudah ada
+                            .trim();
                     QuerySnapshot schoolSnap =
                         await FirebaseFirestore.instance
                             .collection('schools')
@@ -272,7 +259,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       userData['schoolId'] = schoolIdToLink;
                     } else {
                       userData['schoolId'] =
-                          null; // Atau ID sekolah dummy/invalid jika tidak ditemukan
+                          null;
                       if (currentContext.mounted) {
                         ScaffoldMessenger.of(currentContext).showSnackBar(
                           const SnackBar(
@@ -287,16 +274,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   } else if (selectedRole == 'Orang Tua') {
                     userData['childNisRequest'] =
                         schoolNisInputController.text
-                            .trim(); // NIS yang diajukan oleh ortu
-                    userData['isApproved'] = false; // Default: belum disetujui
+                            .trim();
+                    userData['isApproved'] = false;
                     userData['childIds'] =
-                        []; // Default: belum ada anak terhubung
+                        [];
                   } else if (selectedRole == 'Dinas Pendidikan') {
                     userData['dinasName'] =
-                        schoolNisInputController.text.trim(); // Atau nama dinas
+                        schoolNisInputController.text.trim();
                   }
-                  // Tim Katering tidak perlu tambahan field khusus saat registrasi ini
-                  // Jika Tim Katering juga terhubung ke sekolah, Anda bisa tambahkan schoolId seperti Guru
 
                   await FirebaseFirestore.instance
                       .collection('users')
@@ -390,7 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: controller,
-            keyboardType: keyboardType, // Gunakan keyboardType
+            keyboardType: keyboardType,
             decoration: InputDecoration(
               hintText: hint,
               contentPadding: const EdgeInsets.symmetric(
@@ -477,11 +462,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               setState(() {
                 selectedRole = value;
                 schoolNisInputController
-                    .clear(); // Bersihkan input saat role berubah
-                // Set keyboardType berdasarkan role,
+                    .clear();
                 if (value == 'Orang Tua') {
-                  // Jika Anda ingin mengubah keyboardType,
-                  // _buildField harus menerima keyboardType sebagai parameter,
                 }
               });
             },

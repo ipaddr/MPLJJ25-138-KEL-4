@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; // Import FlChart
+import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../provider/user_provider.dart';
 import 'package:intl/intl.dart';
-
-// Import halaman laporan dan insight jika ada
-import '../admin/laporan_konsumsi_page.dart'; // Contoh, ganti jika ada halaman khusus dinas
-import 'dinas_school_verification_page.dart'; // Pastikan ini ada
+import '../admin/laporan_konsumsi_page.dart';
+import 'dinas_school_verification_page.dart';
 
 class DinasDashboard extends StatefulWidget {
   const DinasDashboard({super.key});
@@ -23,7 +21,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
   int totalStudents = 0;
   double averageScore = 0.0;
   List<Map<String, dynamic>> teacherComments = [];
-  List<FlSpot> evaluationSpots = []; // Data for the evaluation chart
+  List<FlSpot> evaluationSpots = [];
 
   @override
   void initState() {
@@ -69,10 +67,9 @@ class _DinasDashboardState extends State<DinasDashboard> {
   Future<void> _fetchDinasStats() async {
     final currentContext = context;
     try {
-      // Fetch Schools Data: Count users with 'Admin Sekolah' role and 'schoolName' field
       QuerySnapshot schoolSnapshot =
           await FirebaseFirestore.instance
-              .collection('schools') // Ambil dari koleksi 'schools'
+              .collection('schools')
               .get();
 
       if (!currentContext.mounted) return;
@@ -86,13 +83,11 @@ class _DinasDashboardState extends State<DinasDashboard> {
         }
       }
 
-      // Fetch Total Students Data
       QuerySnapshot studentSnapshot =
           await FirebaseFirestore.instance.collection('students').get();
       if (!currentContext.mounted) return;
       int tempTotalStudents = studentSnapshot.docs.length;
 
-      // Fetch Average Score from 'understandingAssessments'
       QuerySnapshot understandingAssessmentsSnapshot =
           await FirebaseFirestore.instance
               .collection('understandingAssessments')
@@ -143,9 +138,9 @@ class _DinasDashboardState extends State<DinasDashboard> {
           await FirebaseFirestore.instance
               .collection(
                 'teacherComments',
-              ) // Ambil dari koleksi teacherComments
+              )
               .orderBy('commentedAt', descending: true)
-              .limit(10) // Ambil 10 komentar terbaru
+              .limit(10)
               .get();
 
       if (!currentContext.mounted) return;
@@ -171,26 +166,25 @@ class _DinasDashboardState extends State<DinasDashboard> {
   Future<void> _fetchEvaluationChartData() async {
     final currentContext = context;
     try {
-      // Fetch all academic evaluations
       QuerySnapshot evaluationSnapshot =
           await FirebaseFirestore.instance
               .collection('academicEvaluations')
-              .orderBy('evaluationDate') // Order by date for chronological data
+              .orderBy('evaluationDate')
               .get();
 
       if (!currentContext.mounted) return;
 
       Map<String, List<int>> monthlyScores =
-          {}; // Key:YYYY-MM, Value: List of scores
+          {};
 
       for (var doc in evaluationSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         Timestamp timestamp = data['evaluationDate'] as Timestamp;
         DateTime date = timestamp.toDate();
-        String monthKey = DateFormat('yyyy-MM').format(date); // Group by month
+        String monthKey = DateFormat('yyyy-MM').format(date);
 
         int score =
-            data['afterMbgScore'] ?? 0; // Use afterMbgScore for evaluation
+            data['afterMbgScore'] ?? 0;
 
         if (!monthlyScores.containsKey(monthKey)) {
           monthlyScores[monthKey] = [];
@@ -200,7 +194,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
 
       List<FlSpot> tempSpots = [];
       List<String> sortedMonths =
-          monthlyScores.keys.toList()..sort(); // Sort months chronologically
+          monthlyScores.keys.toList()..sort();
 
       for (int i = 0; i < sortedMonths.length; i++) {
         String month = sortedMonths[i];
@@ -248,15 +242,13 @@ class _DinasDashboardState extends State<DinasDashboard> {
   }
 
   Widget _grafikEvaluasi() {
-    // Determine the max Y value for the chart
-    double maxY = 100; // Assuming scores are out of 100
+    double maxY = 100;
     if (evaluationSpots.isNotEmpty) {
-      // Use .y instead of .toY
       double maxScore = evaluationSpots
           .map((e) => e.y)
           .reduce((a, b) => a > b ? a : b);
       if (maxScore > maxY) {
-        maxY = maxScore * 1.1; // Add 10% buffer if max score exceeds 100
+        maxY = maxScore * 1.1;
       }
     }
 
@@ -409,7 +401,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
                   backgroundColor: Colors.green,
                 ),
               );
-              // Implement actual logout logic if needed
             },
           ),
         ],
@@ -417,9 +408,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
-          // PERHATIKAN STRUKTUR DI SINI!
-          // Semua yang ada di dalam ListView harus di dalam properti 'children: []'
-          children: [ // <-- Pastikan semua widget di dalamnya adalah elemen dari list ini
+          children: [
             Text(
               "Selamat Datang, $dinasName",
               style: const TextStyle(
@@ -430,7 +419,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
             ),
             const SizedBox(height: 20),
 
-            // --- Statistik Section ---
             const Text(
               "Statistik",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -455,7 +443,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
 
             const SizedBox(height: 20),
 
-            // Tombol Verifikasi Sekolah
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
@@ -480,7 +467,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
             ),
             const SizedBox(height: 10),
 
-            // --- Grafik Evaluasi Siswa Section ---
             const Text(
               "Grafik Evaluasi Siswa (Rata-Rata)",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -490,7 +476,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
 
             const SizedBox(height: 20),
 
-            // --- Komentar Guru Terbaru Section ---
             const Text(
               "Komentar Guru Terbaru",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -526,14 +511,13 @@ class _DinasDashboardState extends State<DinasDashboard> {
 
             const SizedBox(height: 20),
 
-            // --- Navigation Buttons ---
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const LaporanKonsumsiPage(),
-                  ), // Contoh navigasi
+                  ),
                 );
               },
               icon: const Icon(Icons.description, color: Colors.white),
@@ -574,9 +558,9 @@ class _DinasDashboardState extends State<DinasDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-          ], // <-- Penutup List children dari ListView
-        ), // <-- Penutup Column
-      ), // <-- Penutup Padding
-    ); // <-- Penutup Scaffold
+          ],
+        ),
+      ),
+    );
   }
 }

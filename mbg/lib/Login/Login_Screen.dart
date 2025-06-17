@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-
 import '../provider/user_provider.dart';
 import '../screens/main_screen.dart';
 import 'lupa_password.dart';
@@ -129,7 +128,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (!currentContext.mounted) return;
 
                         if (userDoc.exists) {
-                          // DEFINE userDataMap DI SINI
                           final userDataMap = userDoc.data() as Map<String, dynamic>?;
 
                           String? storedRole = userDataMap?['role'];
@@ -137,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           String? schoolId = userDataMap?['schoolId'];
                           String? schoolName = userDataMap?['schoolName'];
                           String? profilePictureUrl = userDataMap?['profilePictureUrl'];
-                          bool? isApproved = userDataMap?['isApproved'] ?? false; // Menggunakan ?? false untuk default
+                          bool? isApproved = userDataMap?['isApproved'] ?? false;
                           List<String> childIds = List<String>.from(userDataMap?['childIds'] ?? []);
 
                           if (storedRole == selectedRole) {

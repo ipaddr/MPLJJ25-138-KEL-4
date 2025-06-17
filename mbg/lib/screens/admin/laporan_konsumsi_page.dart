@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../provider/user_provider.dart';
-// Hapus atau jadikan komentar import 'dart:math'; jika sudah tidak digunakan
 
 class LaporanKonsumsiPage extends StatefulWidget {
   const LaporanKonsumsiPage({super.key});
@@ -13,8 +12,6 @@ class LaporanKonsumsiPage extends StatefulWidget {
 }
 
 class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
-  // Tipe data String sudah default non-nullable di Flutter dengan null-safety.
-  // selectedFilter sudah non-nullable karena ada nilai default.
   String selectedFilter = 'Last 30 days';
 
   final List<String> filterOptions = ['Hari Ini', '7 Hari Terakhir', 'Last 30 days'];
@@ -28,28 +25,23 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
   void initState() {
     super.initState();
     _fetchReportData();
-    // dataTidakMakanMingguan = [25, 45, 16, 25, 5]; // Baris ini harus dihapus jika Anda ingin data dinamis sepenuhnya
   }
 
   Future<void> _fetchReportData() async {
     try {
-      // Pastikan context masih mounted sebelum menggunakan Provider
       if (!mounted) return;
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      // currentUserRole akan selalu String karena userProvider.role adalah String non-nullable
-      final String currentUserRole = userProvider.role; // 
-      final String? adminSchoolId = userProvider.schoolId; // 
+      final String currentUserRole = userProvider.role;
+      final String? adminSchoolId = userProvider.schoolId;
 
       QuerySnapshot studentSnapshot;
-      // Logika untuk Admin Sekolah vs. Dinas Pendidikan
-      if (currentUserRole == 'Admin Sekolah' && adminSchoolId != null) { // 
+      if (currentUserRole == 'Admin Sekolah' && adminSchoolId != null) {
         studentSnapshot = await FirebaseFirestore.instance
             .collection('students')
             .where('schoolId', isEqualTo: adminSchoolId)
             .get();
       } else {
-        // Asumsi untuk Dinas Pendidikan (melihat semua siswa jika tidak ada schoolId spesifik)
         studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
       }
 
@@ -71,7 +63,6 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
 
         if (!mounted) return;
 
-        // Jika dokumen konsumsi tidak ada untuk hari ini, atau kedua makanPagi dan makanSiang false
         if (!consumptionDoc.exists ||
             (consumptionDoc.get('makanPagi') == false &&
                 consumptionDoc.get('makanSiang') == false)) {
@@ -83,22 +74,18 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
         siswaTidakMakanHariIni = tempSiswaTidakMakanHariIni;
       });
 
-      // --- Perbaikan untuk dataTidakMakanMingguan ---
       List<int> fetchedWeeklyNotEaten = [];
-      // Mendapatkan data untuk 5 hari kerja terakhir
       for (int i = 0; i < 5; i++) {
         DateTime date = DateTime.now().subtract(Duration(days: i));
-        // Lewati hari Sabtu dan Minggu jika grafik hanya untuk hari kerja
         if (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday) {
-          continue; // Lompat ke iterasi berikutnya jika hari libur
+          continue;
         }
 
         final formattedDate = DateFormat('yyyy-MM-dd').format(date);
         int dailyNotEatenCount = 0;
 
-        // Mendapatkan snapshot siswa yang relevan untuk hari ini
         QuerySnapshot studentsForDaySnapshot;
-        if (currentUserRole == 'Admin Sekolah' && adminSchoolId != null) { // 
+        if (currentUserRole == 'Admin Sekolah' && adminSchoolId != null) {
           studentsForDaySnapshot = await FirebaseFirestore.instance
               .collection('students')
               .where('schoolId', isEqualTo: adminSchoolId)
@@ -124,15 +111,12 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
           }
         }
         
-        // Menambahkan ke awal list untuk menjaga urutan kronologis (hari paling lama di index 0)
         fetchedWeeklyNotEaten.insert(0, dailyNotEatenCount);
       }
       
-      // Jika data kurang dari 5 hari kerja (misal di awal minggu), isi dengan 0
       while (fetchedWeeklyNotEaten.length < 5) {
-        fetchedWeeklyNotEaten.insert(0, 0); // Tambahkan 0 di awal jika belum mencapai 5 hari
+        fetchedWeeklyNotEaten.insert(0, 0);
       }
-      // Pastikan hanya 5 hari yang diambil (misal jika ada hari libur di tengah)
       if (fetchedWeeklyNotEaten.length > 5) {
         fetchedWeeklyNotEaten = fetchedWeeklyNotEaten.sublist(fetchedWeeklyNotEaten.length - 5);
       }
@@ -187,7 +171,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
             ),
 
             const SizedBox(height: 16),
-            Expanded( // Menggunakan Expanded agar ListView tidak unbound
+            Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -209,7 +193,6 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Pastikan index 'hari' tidak out of bounds
                       Text(index < hari.length ? hari[index] : '', style: const TextStyle(fontSize: 13, color: Colors.black54))
                     ],
                   );

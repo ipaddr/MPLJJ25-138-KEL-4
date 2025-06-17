@@ -5,18 +5,18 @@ class UserProvider with ChangeNotifier {
   String? _email;
   String _role = '';
   String? _fullName;
-  String? _schoolId; // Untuk Admin, Guru, Tim Katering (jika terhubung ke sekolah)
-  String? _schoolName; // Added to store school name for admin
+  String? _schoolId;
+  String? _schoolName;
   String? _profilePictureUrl;
-  bool? _isApproved; // Untuk Orang Tua
-  List<String>? _childIds; // Untuk Orang Tua
+  bool? _isApproved;
+  List<String>? _childIds;
 
   String? get uid => _uid;
   String? get email => _email;
   String get role => _role;
   String? get fullName => _fullName;
   String? get schoolId => _schoolId;
-  String? get schoolName => _schoolName; // Getter for schoolName
+  String? get schoolName => _schoolName;
   String? get profilePictureUrl => _profilePictureUrl;
   bool? get isApproved => _isApproved;
   List<String>? get childIds => _childIds;
@@ -27,7 +27,7 @@ class UserProvider with ChangeNotifier {
     _role = role;
     _fullName = fullName;
     _schoolId = schoolId;
-    _schoolName = schoolName; // Set schoolName
+    _schoolName = schoolName;
     _profilePictureUrl = profilePictureUrl;
     _isApproved = isApproved;
     _childIds = childIds;
@@ -40,7 +40,7 @@ class UserProvider with ChangeNotifier {
     _role = '';
     _fullName = null;
     _schoolId = null;
-    _schoolName = null; // Clear schoolName
+    _schoolName = null;
     _profilePictureUrl = null;
     _isApproved = null;
     _childIds = null;
@@ -57,9 +57,8 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Metode baru untuk menambah/menghapus childId dari daftar Orang Tua
   void addChildId(String childId) {
-    _childIds ??= []; // <<< PERBAIKAN DI SINI: Menggunakan null-aware assignment
+    _childIds ??= [];
     if (!_childIds!.contains(childId)) {
       _childIds!.add(childId);
       notifyListeners();

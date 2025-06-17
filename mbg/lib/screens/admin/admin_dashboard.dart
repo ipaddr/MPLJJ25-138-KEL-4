@@ -5,13 +5,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
 import '../../provider/user_provider.dart';
-
 import 'input_data_siswa_page.dart';
 import 'distribusi_makanan_page.dart';
 import 'laporan_konsumsi_page.dart';
-import 'parent_approval_page.dart'; // Added this import
+import 'parent_approval_page.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -23,29 +21,28 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   String adminName = "Admin Sekolah";
   String schoolName = "Nama Sekolah Anda";
-  bool isSchoolVerified = false; // Status verifikasi sekolah dari koleksi 'schools'
+  bool isSchoolVerified = false;
   String? profileImageUrl;
-  int pendingApprovalCount = 0; // For parent approval requests
-  String schoolVerificationStatus = "Belum Mengajukan"; // Status permintaan verifikasi sekolah
+  int pendingApprovalCount = 0;
+  String schoolVerificationStatus = "Belum Mengajukan";
 
   @override
   void initState() {
     super.initState();
     _fetchAdminProfile();
-    _listenToParentApprovalRequests(); // Listener for parent approval requests
-    _listenToSchoolVerificationStatus(); // New listener for school verification status
+    _listenToParentApprovalRequests();
+    _listenToSchoolVerificationStatus();
   }
 
-  // Listener for parent approval requests
   void _listenToParentApprovalRequests() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    String? adminSchoolId = userProvider.schoolId; // Assuming schoolId is available in UserProvider
+    String? adminSchoolId = userProvider.schoolId;
 
     if (adminSchoolId == null) return;
 
     FirebaseFirestore.instance
         .collection('parentApprovalRequests')
-        .where('schoolId', isEqualTo: adminSchoolId) // Filter by admin's school
+        .where('schoolId', isEqualTo: adminSchoolId)
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .listen((snapshot) {
@@ -56,14 +53,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
   }
 
-  // New listener for school verification status
   void _listenToSchoolVerificationStatus() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     String? adminSchoolId = userProvider.schoolId;
 
     if (adminSchoolId == null) return;
-
-    // Listen to the 'schools' document for changes in 'isVerified' status
     FirebaseFirestore.instance
         .collection('schools')
         .doc(adminSchoolId)
@@ -75,19 +69,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
           isSchoolVerified = snapshot.get('isVerified') ?? false;
         });
       } else {
-        // Handle case where school document might not exist yet
         setState(() {
           isSchoolVerified = false;
         });
       }
     });
 
-    // Listen to schoolVerificationRequests for status
     FirebaseFirestore.instance
         .collection('schoolVerificationRequests')
         .where('schoolId', isEqualTo: adminSchoolId)
         .orderBy('requestedAt', descending: true)
-        .limit(1) // Get the latest request
+        .limit(1)
         .snapshots()
         .listen((snapshot) {
       if (!mounted) return;
@@ -208,13 +200,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  // Modified to initiate school verification request to Dinas
   Future<void> _requestSchoolVerification() async {
     final currentContext = context;
     final userProvider = Provider.of<UserProvider>(currentContext, listen: false);
     String? uid = userProvider.uid;
     String? schoolId = userProvider.schoolId;
-    String? currentSchoolName = userProvider.schoolName; // assuming schoolName is in UserProvider or fetched
+    String? currentSchoolName = userProvider.schoolName;
 
     if (uid == null || schoolId == null || currentSchoolName == null) {
       if (currentContext.mounted) {
@@ -226,7 +217,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     try {
-      // Check if a pending request already exists
       QuerySnapshot existingRequest = await FirebaseFirestore.instance.collection('schoolVerificationRequests')
           .where('schoolId', isEqualTo: schoolId)
           .where('status', isEqualTo: 'pending')
@@ -242,20 +232,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
         return;
       }
 
-
-      // Admin submits a verification request to Dinas Pendidikan.
       await FirebaseFirestore.instance.collection('schoolVerificationRequests').add({
         'schoolId': schoolId,
         'schoolName': currentSchoolName,
         'adminUserId': uid,
-        'adminName': adminName, // Using the fetched adminName
-        'status': 'pending', // Initial status
+        'adminName': adminName,
+        'status': 'pending',
         'requestedAt': Timestamp.now(),
       });
 
       if (!currentContext.mounted) return;
       setState(() {
-        schoolVerificationStatus = 'pending'; // Update local status for UI
+        schoolVerificationStatus = 'pending';
       });
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -330,8 +318,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final currentProfileImage = profileImageUrl ?? userProvider.profilePictureUrl;
-
-    // Determine the color for school verification status
     Color verificationColor;
     IconData verificationIcon;
     String verificationMessage;
@@ -349,7 +335,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       verificationIcon = Icons.cancel;
       verificationMessage = "Verifikasi Ditolak";
     } else {
-      // "Belum Mengajukan" or initial state
       verificationColor = Colors.blue.shade100;
       verificationIcon = Icons.gpp_maybe;
       verificationMessage = "Ajukan Verifikasi";
@@ -389,12 +374,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 ),
                 const Spacer(),
-                // Notification button for Parent Approval Requests
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const ParentApprovalPage()), // Navigate to approval page
+                      MaterialPageRoute(builder: (_) => const ParentApprovalPage()),
                     );
                   },
                   child: Stack(
@@ -423,8 +407,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
 
           const SizedBox(height: 20),
-
-          // School Verification Section
           const Text("Verifikasi Sekolah", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(
@@ -443,7 +425,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Verification Button/Indicator
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -458,8 +439,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     : IconButton(
                         icon: Icon(verificationIcon, color: verificationIcon == Icons.gpp_maybe ? Colors.blue.shade800 : (verificationIcon == Icons.pending ? Colors.orange.shade800 : Colors.red.shade800)),
                         onPressed: schoolVerificationStatus == 'pending' || schoolVerificationStatus == 'approved'
-                            ? null // Disable if pending or already approved
-                            : _requestSchoolVerification, // Admin requests verification
+                            ? null
+                            : _requestSchoolVerification,
                       ),
               ),
             ],
@@ -478,8 +459,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
 
           const SizedBox(height: 24),
-
-          // Statistics (Dummy, will be filled later from Firestore)
           const Text("Statistik",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
@@ -495,8 +474,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
 
           const SizedBox(height: 32),
-
-          // Admin Menu
           const Text("Menu",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
