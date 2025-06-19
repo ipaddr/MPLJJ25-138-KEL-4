@@ -31,6 +31,33 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     _listenToPendingRequests();
   }
 
+  // Tambahkan ini untuk menampilkan notifikasi saat pertama kali disetujui
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    // Cek apakah isApproved berubah menjadi true dan sebelumnya pending request tidak null
+    if (userProvider.isApproved == true && userProvider.childIds != null && userProvider.childIds!.isNotEmpty) {
+      if (_pendingRequest != null && _pendingRequest!['status'] == 'pending') {
+        // Ini berarti permintaan yang sebelumnya pending, kini disetujui.
+        // Tampilkan SnackBar dan reset _pendingRequest.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Permintaan akses disetujui! Data anak Anda sekarang ditampilkan."),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 5),
+            ),
+          );
+          setState(() {
+            _pendingRequest = null; // Hapus status pending setelah notifikasi
+          });
+        });
+      }
+    }
+  }
+
+
   void _listenToPendingRequests() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     String? parentUid = userProvider.uid;

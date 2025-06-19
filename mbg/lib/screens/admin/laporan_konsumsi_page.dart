@@ -18,7 +18,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
   final List<String> hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
   int totalSiswa = 0;
-  int siswaTidakMakanHariIni = 0;
+  int siswaTidakMakanHariIni = 0; // Ini yang akan diubah perhitungannya
   List<int> dataTidakMakanMingguan = [];
 
   @override
@@ -42,6 +42,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
             .where('schoolId', isEqualTo: adminSchoolId)
             .get();
       } else {
+        // Ini mungkin tidak relevan jika hanya Admin Sekolah yang melihat laporan
         studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
       }
 
@@ -52,26 +53,33 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
       });
 
       final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      int tempSiswaTidakMakanHariIni = 0;
+      
+      // --- PERUBAHAN DIMULAI DI SINI ---
+      int totalPorsiHariIni = 0;
+      QuerySnapshot menuSnapshot = await FirebaseFirestore.instance
+          .collection('foodMenus')
+          .where('date', isEqualTo: todayFormatted)
+          .limit(1)
+          .get();
 
-      for (var studentDoc in studentSnapshot.docs) {
-        String studentId = studentDoc.id;
-        DocumentSnapshot consumptionDoc = await FirebaseFirestore.instance
-            .collection('dailyConsumptions')
-            .doc('${studentId}_$todayFormatted')
-            .get();
+      if (menuSnapshot.docs.isNotEmpty) {
+        totalPorsiHariIni = menuSnapshot.docs.first.get('portions') ?? 0;
+      }
 
-        if (!mounted) return;
+      int jumlahHadirVerified = 0;
+      QuerySnapshot distSnapshot = await FirebaseFirestore.instance
+          .collection('foodDistributions')
+          .where('date', isEqualTo: todayFormatted)
+          .limit(1)
+          .get();
 
-        if (!consumptionDoc.exists ||
-            (consumptionDoc.get('makanPagi') == false &&
-                consumptionDoc.get('makanSiang') == false)) {
-          tempSiswaTidakMakanHariIni++;
-        }
+      if (distSnapshot.docs.isNotEmpty) {
+        jumlahHadirVerified = distSnapshot.docs.first.get('jumlahHadirVerified') ?? 0;
       }
 
       setState(() {
-        siswaTidakMakanHariIni = tempSiswaTidakMakanHariIni;
+        siswaTidakMakanHariIni = totalPorsiHariIni - jumlahHadirVerified;
+        if (siswaTidakMakanHariIni < 0) siswaTidakMakanHariIni = 0; // Pastikan tidak negatif
       });
 
       List<int> fetchedWeeklyNotEaten = [];
