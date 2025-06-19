@@ -17,43 +17,66 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   final TextEditingController sekolahController = TextEditingController();
 
   Map<String, dynamic>? _pendingRequest;
-
   String parentName = "Nama Orang Tua";
-  bool isApproved = false;
-  List<String> childIds = [];
+
+  // --- KOREKSI: Deklarasi variabel ini dikembalikan ke sini ---
   Map<String, dynamic>? childProfile;
   Map<String, Map<String, bool>> childDailyConsumption = {};
+  // -----------------------------------------------------------
+
+  // State baru untuk mengontrol tampilan dashboard anak setelah disetujui
+  bool _showChildDashboardButton = false;
+  bool _isChildDashboardVisible = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchParentProfile();
+    _fetchParentProfile(); // Tetap panggil ini untuk mendapatkan status awal parentName dll.
     _listenToPendingRequests();
   }
 
-  // Tambahkan ini untuk menampilkan notifikasi saat pertama kali disetujui
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    // Cek apakah isApproved berubah menjadi true dan sebelumnya pending request tidak null
+
+    // Update parentName dari userProvider secara reaktif
+    if (userProvider.fullName != null) {
+      parentName = userProvider.fullName!;
+    }
+
+    // Logika untuk menampilkan notifikasi dan tombol "Lihat Dashboard Anak"
     if (userProvider.isApproved == true && userProvider.childIds != null && userProvider.childIds!.isNotEmpty) {
+      // Jika permintaan baru saja disetujui (ada _pendingRequest dengan status 'pending')
       if (_pendingRequest != null && _pendingRequest!['status'] == 'pending') {
-        // Ini berarti permintaan yang sebelumnya pending, kini disetujui.
-        // Tampilkan SnackBar dan reset _pendingRequest.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Permintaan akses disetujui! Data anak Anda sekarang ditampilkan."),
+              content: Text("Permintaan akses disetujui! Silakan klik 'Lihat Dashboard Anak'."),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 5),
+              // --- KOREKSI DIMULAI DI SINI ---
+              duration: Duration(seconds: 5), // Ini yang dikoreksi
+              // --- KOREKSI BERAKHIR DI SINI ---
             ),
           );
           setState(() {
             _pendingRequest = null; // Hapus status pending setelah notifikasi
+            _showChildDashboardButton = true; // Tampilkan tombol
           });
         });
+      } else if (!_isChildDashboardVisible) {
+        // Jika sudah disetujui sebelumnya (misal, setelah logout/login kembali)
+        // dan belum menampilkan dashboard anak secara langsung
+        setState(() {
+          _showChildDashboardButton = true;
+        });
       }
+    } else {
+      // Jika tidak disetujui, sembunyikan tombol dan dashboard anak
+      setState(() {
+        _showChildDashboardButton = false;
+        _isChildDashboardVisible = false;
+      });
     }
   }
 
@@ -85,18 +108,14 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     if (uid == null) return;
 
     try {
+      // Kita hanya mengambil fullName di sini. isApproved dan childIds akan ditangani oleh UserProvider
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (!currentContext.mounted) return;
 
       if (userDoc.exists) {
         setState(() {
           parentName = userDoc.get('fullName') ?? "Nama Orang Tua";
-          isApproved = userDoc.get('isApproved') ?? false;
-          childIds = List<String>.from(userDoc.get('childIds') ?? []);
         });
-        if (isApproved && childIds.isNotEmpty) {
-          _fetchChildData(childIds.first);
-        }
       }
     } catch (e) {
       if (currentContext.mounted) {
@@ -223,6 +242,14 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
               'makanSiang': consumptionDoc.get('makanSiang') ?? false,
             };
           });
+        } else {
+           // Jika tidak ada dokumen konsumsi hari ini, asumsikan belum makan
+           setState(() {
+            childDailyConsumption[childId] = {
+              'makanPagi': false,
+              'makanSiang': false,
+            };
+          });
         }
       }
     } catch (e) {
@@ -297,12 +324,15 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
                 ],
               ),
               const SizedBox(height: 40),
-              if (!userProvider.isApproved!)
+              // Logika tampilan berdasarkan status persetujuan
+              if (!userProvider.isApproved!) // Jika belum disetujui, tampilkan form pengajuan
                 _buildApprovalRequestFormWithDynamicStatus()
-              else if (userProvider.childIds!.isEmpty)
+              else if (_showChildDashboardButton && !_isChildDashboardVisible) // Jika sudah disetujui tapi belum masuk ke dashboard anak
+                _buildApprovedMessageAndButton()
+              else if (userProvider.childIds == null || userProvider.childIds!.isEmpty) // Jika sudah disetujui tapi belum ada anak terhubung
                 _buildNoChildFound()
-              else
-                _buildChildDashboard(userProvider.childIds![0]),
+              else // Jika sudah disetujui dan siap menampilkan dashboard anak
+                _buildChildDashboard(userProvider.childIds!.first),
             ],
           ),
         ),
@@ -370,6 +400,38 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     );
   }
 
+  Widget _buildApprovedMessageAndButton() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text(
+          "Permintaan akses Anda telah disetujui!",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () {
+            setState(() {
+              _isChildDashboardVisible = true; // Set true untuk menampilkan dashboard anak
+            });
+            final userProvider = Provider.of<UserProvider>(context, listen: false);
+            if (userProvider.childIds != null && userProvider.childIds!.isNotEmpty) {
+              _fetchChildData(userProvider.childIds!.first); // Muat data anak
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text("Lihat Dashboard Anak", style: TextStyle(fontSize: 16)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildNoChildFound() {
     return Column(
       children: const [
@@ -381,6 +443,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   }
 
   Widget _buildChildDashboard(String childId) {
+    // Memastikan childProfile dimuat saat dashboard anak terlihat
     if (childProfile == null) {
       _fetchChildData(childId);
       return const Center(child: CircularProgressIndicator());

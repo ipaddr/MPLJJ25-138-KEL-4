@@ -35,7 +35,11 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
     if (currentAdminSchoolId == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Permintaan Akses Orang Tua")),
-        body: const Center(child: Text("Data sekolah Admin tidak ditemukan. Tidak dapat memuat permintaan.")),
+        body: const Center(
+          child: Text(
+            "Data sekolah Admin tidak ditemukan. Tidak dapat memuat permintaan.",
+          ),
+        ),
       );
     }
 
@@ -45,11 +49,12 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
         backgroundColor: Colors.blue,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('parentApprovalRequests')
-            .where('schoolId', isEqualTo: currentAdminSchoolId)
-            .where('status', isEqualTo: 'pending')
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection('parentApprovalRequests')
+                .where('schoolId', isEqualTo: currentAdminSchoolId)
+                .where('status', isEqualTo: 'pending')
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -58,7 +63,11 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
             return Center(child: Text("Error: ${snapshot.error}"));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("Tidak ada permintaan akses orang tua yang tertunda."));
+            return const Center(
+              child: Text(
+                "Tidak ada permintaan akses orang tua yang tertunda.",
+              ),
+            );
           }
 
           final requests = snapshot.data!.docs;
@@ -82,23 +91,44 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Permintaan dari Orang Tua ID: $parentId", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        "Permintaan dari Orang Tua ID: $parentId",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       Text("NIS Anak: $childNis"),
                       Text("Nama Sekolah: $schoolName"),
-                      Text("Diminta pada: ${DateFormat('dd-MM-yyyy HH:mm').format(requestedAt.toDate())}"),
+                      Text(
+                        "Diminta pada: ${DateFormat('dd-MM-yyyy HH:mm').format(requestedAt.toDate())}",
+                      ),
                       const SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           ElevatedButton(
-                            onPressed: () => _processRequest(requestId, parentId, childId, 'approved'),
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            onPressed:
+                                () => _processRequest(
+                                  requestId,
+                                  parentId,
+                                  childId,
+                                  'approved',
+                                ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                            ),
                             child: const Text("Setujui"),
                           ),
                           const SizedBox(width: 10),
                           ElevatedButton(
-                            onPressed: () => _processRequest(requestId, parentId, childId, 'rejected'),
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            onPressed:
+                                () => _processRequest(
+                                  requestId,
+                                  parentId,
+                                  childId,
+                                  'rejected',
+                                ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                            ),
                             child: const Text("Tolak"),
                           ),
                         ],
@@ -114,7 +144,12 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
     );
   }
 
-  Future<void> _processRequest(String requestId, String parentId, String childId, String status) async {
+  Future<void> _processRequest(
+    String requestId,
+    String parentId,
+    String childId,
+    String status,
+  ) async {
     final currentContext = context;
     String? adminUid = _adminUid;
     String? adminSchoolId = _adminSchoolId;
@@ -122,82 +157,146 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
     if (adminUid == null || adminSchoolId == null) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("Admin tidak terautentikasi atau ID sekolah tidak ditemukan."), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text(
+              "Admin tidak terautentikasi atau ID sekolah tidak ditemukan.",
+            ),
+            backgroundColor: Colors.red,
+          ),
         );
       }
       return;
     }
 
     try {
-      await FirebaseFirestore.instance.collection('parentApprovalRequests').doc(requestId).update({
-        'status': status,
-        'processedByAdminId': adminUid,
-        'processedAt': Timestamp.now(),
-      });
+      await FirebaseFirestore.instance
+          .collection('parentApprovalRequests')
+          .doc(requestId)
+          .update({
+            'status': status,
+            'processedByAdminId': adminUid,
+            'processedAt': Timestamp.now(),
+          });
 
       if (status == 'approved') {
         if (childId != 'N/A') {
-          DocumentSnapshot actualStudentDoc = await FirebaseFirestore.instance.collection('students').doc(childId).get();
+          DocumentSnapshot actualStudentDoc =
+              await FirebaseFirestore.instance
+                  .collection('students')
+                  .doc(childId)
+                  .get();
           if (!currentContext.mounted) return;
 
           if (actualStudentDoc.exists) {
-            await FirebaseFirestore.instance.collection('students').doc(childId).update({
-              'parentIds': FieldValue.arrayUnion([parentId]),
-            });
+            // Update student's parentIds (optional, depending on your data model)
+            await FirebaseFirestore.instance
+                .collection('students')
+                .doc(childId)
+                .update({
+                  'parentIds': FieldValue.arrayUnion([parentId]),
+                });
 
-            await FirebaseFirestore.instance.collection('users').doc(parentId).update({
-              'isApproved': true,
-              'childIds': FieldValue.arrayUnion([childId]),
-            });
+            // *** Bagian KRUSIAL: Update dokumen user Orang Tua ***
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(parentId)
+                .update({
+                  'isApproved': true, // SET INI KE TRUE
+                  'childIds': FieldValue.arrayUnion([
+                    childId,
+                  ]), // TAMBAHKAN CHILD ID KE ARRAY
+                });
 
             if (currentContext.mounted) {
-              Provider.of<UserProvider>(currentContext, listen: false).updateApprovalStatus(true);
-              Provider.of<UserProvider>(currentContext, listen: false).addChildId(childId);
+              // Ini akan memicu update di UserProvider dan OrangTuaDashboard
+              Provider.of<UserProvider>(
+                currentContext,
+                listen: false,
+              ).updateApprovalStatus(true);
+              Provider.of<UserProvider>(
+                currentContext,
+                listen: false,
+              ).addChildId(childId);
             }
           } else {
             if (currentContext.mounted) {
               ScaffoldMessenger.of(currentContext).showSnackBar(
-                const SnackBar(content: Text("Peringatan: ID Siswa tidak ditemukan di database. Approval dilakukan, tapi data anak tidak terhubung."), backgroundColor: Colors.orange),
+                const SnackBar(
+                  content: Text(
+                    "Peringatan: ID Siswa tidak ditemukan di database. Approval dilakukan, tapi data anak tidak terhubung.",
+                  ),
+                  backgroundColor: Colors.orange,
+                ),
               );
             }
           }
         } else {
           if (currentContext.mounted) {
             ScaffoldMessenger.of(currentContext).showSnackBar(
-              const SnackBar(content: Text("Peringatan: ID Siswa dalam permintaan tidak valid ('N/A'). Approval dilakukan, tapi data anak tidak terhubung."), backgroundColor: Colors.orange),
+              const SnackBar(
+                content: Text(
+                  "Peringatan: ID Siswa dalam permintaan tidak valid ('N/A'). Approval dilakukan, tapi data anak tidak terhubung.",
+                ),
+                backgroundColor: Colors.orange,
+              ),
             );
           }
         }
       } else {
-        await FirebaseFirestore.instance.collection('users').doc(parentId).update({
-          'isApproved': false,
-          'childIds': FieldValue.arrayRemove([childId]),
-        });
+        // Jika status == 'rejected'
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(parentId)
+            .update({
+              'isApproved': false, // Set false jika ditolak
+              'childIds': FieldValue.arrayRemove([
+                childId,
+              ]), // Hapus childId jika ditolak
+            });
 
         if (childId != 'N/A') {
-          DocumentSnapshot actualStudentDoc = await FirebaseFirestore.instance.collection('students').doc(childId).get();
+          DocumentSnapshot actualStudentDoc =
+              await FirebaseFirestore.instance
+                  .collection('students')
+                  .doc(childId)
+                  .get();
           if (actualStudentDoc.exists) {
-            await FirebaseFirestore.instance.collection('students').doc(childId).update({
-              'parentIds': FieldValue.arrayRemove([parentId]),
-            });
+            await FirebaseFirestore.instance
+                .collection('students')
+                .doc(childId)
+                .update({
+                  'parentIds': FieldValue.arrayRemove([parentId]),
+                });
           }
         }
-        
+
         if (currentContext.mounted) {
-          Provider.of<UserProvider>(currentContext, listen: false).updateApprovalStatus(false);
-          Provider.of<UserProvider>(currentContext, listen: false).removeChildId(childId);
+          Provider.of<UserProvider>(
+            currentContext,
+            listen: false,
+          ).updateApprovalStatus(false);
+          Provider.of<UserProvider>(
+            currentContext,
+            listen: false,
+          ).removeChildId(childId);
         }
       }
-      
+
       if (!currentContext.mounted) return;
 
       ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(content: Text("Permintaan berhasil di$status!"), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text("Permintaan berhasil di$status!"),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(content: Text("Gagal memproses permintaan: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Gagal memproses permintaan: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
