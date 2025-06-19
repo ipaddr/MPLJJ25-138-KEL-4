@@ -10,6 +10,7 @@ import 'input_data_siswa_page.dart';
 import 'distribusi_makanan_page.dart';
 import 'laporan_konsumsi_page.dart';
 import 'parent_approval_page.dart';
+import '../guru/chatbot_page.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -43,7 +44,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     FirebaseFirestore.instance
         .collection('parentApprovalRequests')
         .where('schoolId', isEqualTo: adminSchoolId)
-        .where('status', isEqualTo: 'pending')
+        .where('status', isEqualTo: 'pending') 
         .snapshots()
         .listen((snapshot) {
       if (!mounted) return;
@@ -374,33 +375,62 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ParentApprovalPage()),
-                    );
-                  },
-                  child: Stack(
-                    children: [
-                      const Icon(Icons.notifications_none, size: 28),
-                      if (pendingApprovalCount > 0)
-                        Positioned(
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              pendingApprovalCount.toString(),
-                              style: const TextStyle(fontSize: 10, color: Colors.white),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          const Icon(Icons.smart_toy, size: 28),
+                          Positioned(
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ParentApprovalPage()),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          const Icon(Icons.notifications_none, size: 28),
+                          if (pendingApprovalCount > 0)
+                            Positioned(
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  pendingApprovalCount.toString(),
+                                  style: const TextStyle(fontSize: 10, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

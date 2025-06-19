@@ -6,6 +6,7 @@ import '../../provider/user_provider.dart';
 import 'package:intl/intl.dart';
 import '../admin/laporan_konsumsi_page.dart';
 import 'dinas_school_verification_page.dart';
+import '../guru/chatbot_page.dart';
 
 class DinasDashboard extends StatefulWidget {
   const DinasDashboard({super.key});
@@ -392,6 +393,30 @@ class _DinasDashboardState extends State<DinasDashboard> {
         backgroundColor: Colors.indigo,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.smart_toy, size: 28),
+                Positioned(
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {

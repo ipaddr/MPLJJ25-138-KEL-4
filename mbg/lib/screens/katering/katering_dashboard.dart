@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../guru/chatbot_page.dart';
 
 class KateringDashboard extends StatefulWidget {
   const KateringDashboard({super.key});
@@ -225,8 +226,7 @@ class _KateringDashboardState extends State<KateringDashboard> {
             .collection('foodDistributions')
             .doc(existingDist.docs.first.id)
             .update({
-              'deliveryStatus':
-                  'Pending',
+              'deliveryStatus': 'Pending',
               'preparedByCatering': true,
               'lastUpdatedByCatering': Timestamp.now(),
             });
@@ -268,15 +268,50 @@ class _KateringDashboardState extends State<KateringDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.calendar_today, color: Colors.blue),
-                const SizedBox(width: 6),
-                Text(
-                  now,
-                  style: const TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, color: Colors.blue),
+                    const SizedBox(width: 6),
+                    Text(
+                      now,
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          const Icon(Icons.smart_toy, size: 28),
+                          Positioned(
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.notifications_none, size: 28),
+                  ],
                 ),
               ],
             ),

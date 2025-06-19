@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../provider/user_provider.dart';
 import 'package:intl/intl.dart';
+import '../guru/chatbot_page.dart';
 
 class OrangTuaDashboard extends StatefulWidget {
   const OrangTuaDashboard({super.key});
@@ -119,7 +120,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         }
         return;
       }
+
       schoolIdOfStudent = schoolQuerySnapshot.docs.first.id;
+
       QuerySnapshot studentQuerySnapshot = await FirebaseFirestore.instance.collection('students')
           .where('nis', isEqualTo: nisController.text.trim())
           .where('schoolId', isEqualTo: schoolIdOfStudent)
@@ -135,6 +138,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         return;
       }
       studentIdToRequest = studentQuerySnapshot.docs.first.id;
+
       await FirebaseFirestore.instance.collection('parentApprovalRequests').add({
         'parentId': parentUid,
         'childNis': nisController.text.trim(),
@@ -233,7 +237,36 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
                       ),
                     ],
                   ),
-                  const Icon(Icons.notifications_none),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            const Icon(Icons.smart_toy, size: 28),
+                            Positioned(
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.notifications_none),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 40),
@@ -309,6 +342,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       ],
     );
   }
+
   Widget _buildNoChildFound() {
     return Column(
       children: const [
@@ -318,6 +352,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       ],
     );
   }
+
   Widget _buildChildDashboard(String childId) {
     if (childProfile == null) {
       _fetchChildData(childId);
@@ -369,6 +404,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       ],
     );
   }
+
   Widget _buildMealStatusTile(String title, IconData icon, bool isEaten) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
