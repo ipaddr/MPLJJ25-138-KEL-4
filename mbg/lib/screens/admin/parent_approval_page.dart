@@ -188,27 +188,23 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
           if (!currentContext.mounted) return;
 
           if (actualStudentDoc.exists) {
-            // Update student's parentIds (optional, depending on your data model)
             await FirebaseFirestore.instance
                 .collection('students')
                 .doc(childId)
                 .update({
                   'parentIds': FieldValue.arrayUnion([parentId]),
                 });
-
-            // *** Bagian KRUSIAL: Update dokumen user Orang Tua ***
             await FirebaseFirestore.instance
                 .collection('users')
                 .doc(parentId)
                 .update({
-                  'isApproved': true, // SET INI KE TRUE
+                  'isApproved': true,
                   'childIds': FieldValue.arrayUnion([
                     childId,
-                  ]), // TAMBAHKAN CHILD ID KE ARRAY
+                  ]),
                 });
 
             if (currentContext.mounted) {
-              // Ini akan memicu update di UserProvider dan OrangTuaDashboard
               Provider.of<UserProvider>(
                 currentContext,
                 listen: false,
@@ -243,15 +239,14 @@ class _ParentApprovalPageState extends State<ParentApprovalPage> {
           }
         }
       } else {
-        // Jika status == 'rejected'
         await FirebaseFirestore.instance
             .collection('users')
             .doc(parentId)
             .update({
-              'isApproved': false, // Set false jika ditolak
+              'isApproved': false,
               'childIds': FieldValue.arrayRemove([
                 childId,
-              ]), // Hapus childId jika ditolak
+              ]),
             });
 
         if (childId != 'N/A') {

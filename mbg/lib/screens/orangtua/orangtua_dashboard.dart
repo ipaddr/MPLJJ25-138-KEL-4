@@ -19,19 +19,15 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   Map<String, dynamic>? _pendingRequest;
   String parentName = "Nama Orang Tua";
 
-  // --- KOREKSI: Deklarasi variabel ini dikembalikan ke sini ---
   Map<String, dynamic>? childProfile;
   Map<String, Map<String, bool>> childDailyConsumption = {};
-  // -----------------------------------------------------------
-
-  // State baru untuk mengontrol tampilan dashboard anak setelah disetujui
   bool _showChildDashboardButton = false;
   bool _isChildDashboardVisible = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchParentProfile(); // Tetap panggil ini untuk mendapatkan status awal parentName dll.
+    _fetchParentProfile();
     _listenToPendingRequests();
   }
 
@@ -39,40 +35,31 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-    // Update parentName dari userProvider secara reaktif
     if (userProvider.fullName != null) {
       parentName = userProvider.fullName!;
     }
 
-    // Logika untuk menampilkan notifikasi dan tombol "Lihat Dashboard Anak"
     if (userProvider.isApproved == true && userProvider.childIds != null && userProvider.childIds!.isNotEmpty) {
-      // Jika permintaan baru saja disetujui (ada _pendingRequest dengan status 'pending')
       if (_pendingRequest != null && _pendingRequest!['status'] == 'pending') {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Permintaan akses disetujui! Silakan klik 'Lihat Dashboard Anak'."),
               backgroundColor: Colors.green,
-              // --- KOREKSI DIMULAI DI SINI ---
-              duration: Duration(seconds: 5), // Ini yang dikoreksi
-              // --- KOREKSI BERAKHIR DI SINI ---
+              duration: Duration(seconds: 5),
             ),
           );
           setState(() {
-            _pendingRequest = null; // Hapus status pending setelah notifikasi
-            _showChildDashboardButton = true; // Tampilkan tombol
+            _pendingRequest = null;
+            _showChildDashboardButton = true;
           });
         });
       } else if (!_isChildDashboardVisible) {
-        // Jika sudah disetujui sebelumnya (misal, setelah logout/login kembali)
-        // dan belum menampilkan dashboard anak secara langsung
         setState(() {
           _showChildDashboardButton = true;
         });
       }
     } else {
-      // Jika tidak disetujui, sembunyikan tombol dan dashboard anak
       setState(() {
         _showChildDashboardButton = false;
         _isChildDashboardVisible = false;
@@ -108,7 +95,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     if (uid == null) return;
 
     try {
-      // Kita hanya mengambil fullName di sini. isApproved dan childIds akan ditangani oleh UserProvider
       DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (!currentContext.mounted) return;
 
@@ -243,7 +229,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
             };
           });
         } else {
-           // Jika tidak ada dokumen konsumsi hari ini, asumsikan belum makan
            setState(() {
             childDailyConsumption[childId] = {
               'makanPagi': false,
@@ -324,14 +309,13 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
                 ],
               ),
               const SizedBox(height: 40),
-              // Logika tampilan berdasarkan status persetujuan
-              if (!userProvider.isApproved!) // Jika belum disetujui, tampilkan form pengajuan
+              if (!userProvider.isApproved!)
                 _buildApprovalRequestFormWithDynamicStatus()
-              else if (_showChildDashboardButton && !_isChildDashboardVisible) // Jika sudah disetujui tapi belum masuk ke dashboard anak
+              else if (_showChildDashboardButton && !_isChildDashboardVisible)
                 _buildApprovedMessageAndButton()
-              else if (userProvider.childIds == null || userProvider.childIds!.isEmpty) // Jika sudah disetujui tapi belum ada anak terhubung
+              else if (userProvider.childIds == null || userProvider.childIds!.isEmpty)
                 _buildNoChildFound()
-              else // Jika sudah disetujui dan siap menampilkan dashboard anak
+              else
                 _buildChildDashboard(userProvider.childIds!.first),
             ],
           ),
@@ -413,11 +397,11 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         ElevatedButton(
           onPressed: () {
             setState(() {
-              _isChildDashboardVisible = true; // Set true untuk menampilkan dashboard anak
+              _isChildDashboardVisible = true;
             });
             final userProvider = Provider.of<UserProvider>(context, listen: false);
             if (userProvider.childIds != null && userProvider.childIds!.isNotEmpty) {
-              _fetchChildData(userProvider.childIds!.first); // Muat data anak
+              _fetchChildData(userProvider.childIds!.first);
             }
           },
           style: ElevatedButton.styleFrom(
@@ -443,7 +427,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   }
 
   Widget _buildChildDashboard(String childId) {
-    // Memastikan childProfile dimuat saat dashboard anak terlihat
     if (childProfile == null) {
       _fetchChildData(childId);
       return const Center(child: CircularProgressIndicator());

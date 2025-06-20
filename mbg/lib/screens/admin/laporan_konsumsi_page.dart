@@ -18,7 +18,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
   final List<String> hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
   int totalSiswa = 0;
-  int siswaTidakMakanHariIni = 0; // Ini yang akan diubah perhitungannya
+  int siswaTidakMakanHariIni = 0;
   List<int> dataTidakMakanMingguan = [];
 
   @override
@@ -42,7 +42,6 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
             .where('schoolId', isEqualTo: adminSchoolId)
             .get();
       } else {
-        // Ini mungkin tidak relevan jika hanya Admin Sekolah yang melihat laporan
         studentSnapshot = await FirebaseFirestore.instance.collection('students').get();
       }
 
@@ -53,8 +52,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
       });
 
       final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      
-      // --- PERUBAHAN DIMULAI DI SINI ---
+            
       int totalPorsiHariIni = 0;
       QuerySnapshot menuSnapshot = await FirebaseFirestore.instance
           .collection('foodMenus')
@@ -79,7 +77,7 @@ class _LaporanKonsumsiPageState extends State<LaporanKonsumsiPage> {
 
       setState(() {
         siswaTidakMakanHariIni = totalPorsiHariIni - jumlahHadirVerified;
-        if (siswaTidakMakanHariIni < 0) siswaTidakMakanHariIni = 0; // Pastikan tidak negatif
+        if (siswaTidakMakanHariIni < 0) siswaTidakMakanHariIni = 0;
       });
 
       List<int> fetchedWeeklyNotEaten = [];

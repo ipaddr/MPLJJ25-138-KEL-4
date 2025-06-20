@@ -88,8 +88,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
           await FirebaseFirestore.instance.collection('students').get();
       if (!currentContext.mounted) return;
       int tempTotalStudents = studentSnapshot.docs.length;
-
-      // --- PERBAIKAN: Hitung rata-rata nilai siswa dari academicEvaluations ---
       QuerySnapshot academicEvaluationsSnapshot =
           await FirebaseFirestore.instance
               .collection('academicEvaluations')
@@ -100,7 +98,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
       int academicScoreCount = 0;
       for (var doc in academicEvaluationsSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        // Ambil nilai 'afterMbgScore' sebagai representasi nilai siswa setelah makan
         if (data.containsKey('afterMbgScore')) {
           totalAcademicScores += (data['afterMbgScore'] as int);
           academicScoreCount++;
@@ -108,13 +105,12 @@ class _DinasDashboardState extends State<DinasDashboard> {
       }
       double tempAverageAcademicScore =
           academicScoreCount > 0 ? totalAcademicScores / academicScoreCount : 0.0;
-      // --- AKHIR PERBAIKAN ---
 
       setState(() {
         totalSchools = tempTotalSchools;
         verifiedSchools = tempVerifiedSchools;
         totalStudents = tempTotalStudents;
-        averageScore = tempAverageAcademicScore; // Menggunakan rata-rata nilai akademik
+        averageScore = tempAverageAcademicScore;
       });
     } catch (e) {
       if (currentContext.mounted) {
@@ -141,38 +137,35 @@ class _DinasDashboardState extends State<DinasDashboard> {
       if (!currentContext.mounted) return;
 
       List<Map<String, dynamic>> fetchedComments = [];
-      // Map untuk menyimpan nama sekolah berdasarkan ID (untuk menghindari pembacaan berulang)
       Map<String, String> schoolNamesCache = {};
 
       for (var doc in commentSnapshot.docs) {
         var commentData = doc.data() as Map<String, dynamic>;
-        String schoolId = commentData['schoolId'] ?? ''; // Ambil schoolId dari dokumen komentar
+        String schoolId = commentData['schoolId'] ?? '';
 
         String schoolNameDisplay;
         if (schoolId.isNotEmpty) {
-          // Cek di cache dulu
           if (schoolNamesCache.containsKey(schoolId)) {
             schoolNameDisplay = schoolNamesCache[schoolId]!;
           } else {
-            // Jika tidak ada di cache, baca dari koleksi 'schools'
             DocumentSnapshot schoolDoc =
                 await FirebaseFirestore.instance.collection('schools').doc(schoolId).get();
             if (schoolDoc.exists) {
               schoolNameDisplay = schoolDoc.get('schoolName') ?? 'Sekolah Tidak Diketahui';
-              schoolNamesCache[schoolId] = schoolNameDisplay; // Simpan ke cache
+              schoolNamesCache[schoolId] = schoolNameDisplay;
             } else {
-              schoolNameDisplay = 'Sekolah Tidak Ditemukan'; // Jika schoolId tidak valid/ditemukan
+              schoolNameDisplay = 'Sekolah Tidak Ditemukan';
             }
           }
         } else {
-          schoolNameDisplay = 'Sekolah Tidak Diketahui'; // Jika schoolId tidak ada di dokumen komentar
+          schoolNameDisplay = 'Sekolah Tidak Diketahui';
         }
 
         fetchedComments.add({
           'teacherId': commentData['teacherId'],
           'teacherName': commentData['teacherName'] ?? 'Guru',
           'schoolId': schoolId,
-          'schoolName': schoolNameDisplay, // Tambahkan nama sekolah yang sudah dicari/ditemukan
+          'schoolName': schoolNameDisplay,
           'studentId': commentData['studentId'],
           'comment': commentData['comment'] ?? 'Tidak ada komentar',
           'commentedAt': commentData['commentedAt'],
@@ -549,7 +542,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
                   child: ListTile(
                     leading: const Icon(Icons.comment, color: Colors.indigo),
                     title: Text(
-                      "${comment['teacherName'] ?? 'Guru'} dari ${comment['schoolName'] ?? 'Sekolah Tidak Diketahui'}", // Menggunakan field schoolName yang sudah dicari
+                      "${comment['teacherName'] ?? 'Guru'} dari ${comment['schoolName'] ?? 'Sekolah Tidak Diketahui'}",
                     ),
                     subtitle: Text(comment['comment'] ?? 'Tidak ada komentar'),
                     trailing:
