@@ -464,16 +464,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         const Text("Penilaian Fokus: Meningkat", style: TextStyle(color: Colors.black54)),
 
         const SizedBox(height: 20),
-        Center(
-          child: ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Fitur detail anak akan datang!")),
-              );
-            },
-            child: const Text("Lihat Detail Lengkap"),
-          ),
-        ),
       ],
     );
   }
