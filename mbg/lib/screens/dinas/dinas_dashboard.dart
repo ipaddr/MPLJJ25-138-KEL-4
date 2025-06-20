@@ -89,36 +89,32 @@ class _DinasDashboardState extends State<DinasDashboard> {
       if (!currentContext.mounted) return;
       int tempTotalStudents = studentSnapshot.docs.length;
 
-      QuerySnapshot understandingAssessmentsSnapshot =
+      // --- PERBAIKAN: Hitung rata-rata nilai siswa dari academicEvaluations ---
+      QuerySnapshot academicEvaluationsSnapshot =
           await FirebaseFirestore.instance
-              .collection('understandingAssessments')
+              .collection('academicEvaluations')
               .get();
       if (!currentContext.mounted) return;
 
-      int totalScores = 0;
-      int scoreCount = 0;
-      for (var doc in understandingAssessmentsSnapshot.docs) {
+      int totalAcademicScores = 0;
+      int academicScoreCount = 0;
+      for (var doc in academicEvaluationsSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey('fokusSetelahMakan')) {
-          totalScores += (data['fokusSetelahMakan'] as int);
-          scoreCount++;
-        }
-        if (data.containsKey('keaktifanDalamDiskusi')) {
-          totalScores += (data['keaktifanDalamDiskusi'] as int);
-          scoreCount++;
-        }
-        if (data.containsKey('kecepatanMemahami')) {
-          totalScores += (data['kecepatanMemahami'] as int);
-          scoreCount++;
+        // Ambil nilai 'afterMbgScore' sebagai representasi nilai siswa setelah makan
+        if (data.containsKey('afterMbgScore')) {
+          totalAcademicScores += (data['afterMbgScore'] as int);
+          academicScoreCount++;
         }
       }
-      double tempAverageScore = scoreCount > 0 ? totalScores / scoreCount : 0.0;
+      double tempAverageAcademicScore =
+          academicScoreCount > 0 ? totalAcademicScores / academicScoreCount : 0.0;
+      // --- AKHIR PERBAIKAN ---
 
       setState(() {
         totalSchools = tempTotalSchools;
         verifiedSchools = tempVerifiedSchools;
         totalStudents = tempTotalStudents;
-        averageScore = tempAverageScore;
+        averageScore = tempAverageAcademicScore; // Menggunakan rata-rata nilai akademik
       });
     } catch (e) {
       if (currentContext.mounted) {
@@ -137,20 +133,54 @@ class _DinasDashboardState extends State<DinasDashboard> {
     try {
       QuerySnapshot commentSnapshot =
           await FirebaseFirestore.instance
-              .collection(
-                'teacherComments',
-              )
+              .collection('teacherComments')
               .orderBy('commentedAt', descending: true)
               .limit(10)
               .get();
 
       if (!currentContext.mounted) return;
 
+      List<Map<String, dynamic>> fetchedComments = [];
+      // Map untuk menyimpan nama sekolah berdasarkan ID (untuk menghindari pembacaan berulang)
+      Map<String, String> schoolNamesCache = {};
+
+      for (var doc in commentSnapshot.docs) {
+        var commentData = doc.data() as Map<String, dynamic>;
+        String schoolId = commentData['schoolId'] ?? ''; // Ambil schoolId dari dokumen komentar
+
+        String schoolNameDisplay;
+        if (schoolId.isNotEmpty) {
+          // Cek di cache dulu
+          if (schoolNamesCache.containsKey(schoolId)) {
+            schoolNameDisplay = schoolNamesCache[schoolId]!;
+          } else {
+            // Jika tidak ada di cache, baca dari koleksi 'schools'
+            DocumentSnapshot schoolDoc =
+                await FirebaseFirestore.instance.collection('schools').doc(schoolId).get();
+            if (schoolDoc.exists) {
+              schoolNameDisplay = schoolDoc.get('schoolName') ?? 'Sekolah Tidak Diketahui';
+              schoolNamesCache[schoolId] = schoolNameDisplay; // Simpan ke cache
+            } else {
+              schoolNameDisplay = 'Sekolah Tidak Ditemukan'; // Jika schoolId tidak valid/ditemukan
+            }
+          }
+        } else {
+          schoolNameDisplay = 'Sekolah Tidak Diketahui'; // Jika schoolId tidak ada di dokumen komentar
+        }
+
+        fetchedComments.add({
+          'teacherId': commentData['teacherId'],
+          'teacherName': commentData['teacherName'] ?? 'Guru',
+          'schoolId': schoolId,
+          'schoolName': schoolNameDisplay, // Tambahkan nama sekolah yang sudah dicari/ditemukan
+          'studentId': commentData['studentId'],
+          'comment': commentData['comment'] ?? 'Tidak ada komentar',
+          'commentedAt': commentData['commentedAt'],
+        });
+      }
+
       setState(() {
-        teacherComments =
-            commentSnapshot.docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
-                .toList();
+        teacherComments = fetchedComments;
       });
     } catch (e) {
       if (currentContext.mounted) {
@@ -519,7 +549,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
                   child: ListTile(
                     leading: const Icon(Icons.comment, color: Colors.indigo),
                     title: Text(
-                      "${comment['teacherName'] ?? 'Guru'} dari ${comment['schoolName'] ?? 'Sekolah Tidak Diketahui'}",
+                      "${comment['teacherName'] ?? 'Guru'} dari ${comment['schoolName'] ?? 'Sekolah Tidak Diketahui'}", // Menggunakan field schoolName yang sudah dicari
                     ),
                     subtitle: Text(comment['comment'] ?? 'Tidak ada komentar'),
                     trailing:
