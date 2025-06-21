@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'provider/user_provider.dart';
 import 'theme/app_theme.dart';
-import 'splash_screen1.dart';
+import 'splash_screen1.dart'; // Tetap Splash Screen 1 sebagai home awal
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import flutter_dotenv
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +14,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await initializeDateFormatting('id_ID', null);
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: ".env"); // Memuat file .env
 
   runApp(
     MultiProvider(
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
       title: 'Makan Gizi Gratis',
       debugShowCheckedModeBanner: false,
       theme: appTheme,
-      home: const SplashScreen1(),
+      home: const SplashScreen1(), // App dimulai dari SplashScreen1
     );
   }
 }

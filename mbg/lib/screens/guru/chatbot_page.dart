@@ -28,7 +28,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
     super.initState();
     final String? apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
-      // Tangani jika API Key tidak ditemukan (misalnya tampilkan error)
       throw Exception("Gemini API Key tidak ditemukan di environment variables.");
     }
     _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);

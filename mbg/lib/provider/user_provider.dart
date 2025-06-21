@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart'; // Tambahkan ini untuk debugPrint
 
 class UserProvider with ChangeNotifier {
   String? _uid;
@@ -10,7 +14,98 @@ class UserProvider with ChangeNotifier {
   String? _profilePictureUrl;
   bool? _isApproved;
   List<String>? _childIds;
+  
+  bool _isLoading = true;
+  bool _isInitialized = false;
 
+  StreamSubscription<User?>? _authStateChangesSubscription;
+  StreamSubscription<DocumentSnapshot>? _userDocSubscription;
+
+  bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
+
+  UserProvider() {
+    _authStateChangesSubscription = FirebaseAuth.instance.authStateChanges().listen((user) async {
+      _userDocSubscription?.cancel();
+      if (user != null) {
+        _uid = user.uid;
+        _email = user.email;
+        _listenToUserDocument(user.uid);
+      } else {
+        clearUser();
+        _isLoading = false;
+        _isInitialized = true;
+        notifyListeners();
+      }
+    });
+  }
+
+  Future<void> initializeUser() async {
+    if (_isInitialized) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (FirebaseAuth.instance.currentUser == null) {
+        _isLoading = false;
+        _isInitialized = true;
+        notifyListeners();
+        return;
+    }
+
+    if (_uid != null && _role.isEmpty) {
+        // Jika UID ada tapi role masih kosong (artinya data user belum sepenuhnya dimuat dari Firestore)
+        // Kita bisa beri waktu lagi atau logic untuk menunggu _listenToUserDocument selesai
+        // Untuk saat ini, kita biarkan _listenToUserDocument yang mengupdate _isLoading dan _isInitialized
+    } else {
+        _isLoading = false;
+        _isInitialized = true;
+    }
+    notifyListeners();
+  }
+
+  void _listenToUserDocument(String uid) {
+    _userDocSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        _uid = uid;
+        _email = snapshot.get('email') ?? _email;
+        _role = snapshot.get('role') ?? '';
+        _fullName = snapshot.get('fullName');
+        _schoolId = snapshot.get('schoolId');
+        _schoolName = snapshot.get('schoolName');
+        _profilePictureUrl = snapshot.get('profilePictureUrl');
+        _isApproved = snapshot.get('isApproved');
+        _childIds = List<String>.from(snapshot.get('childIds') ?? []);
+      } else {
+        _role = '';
+      }
+      _isLoading = false;
+      _isInitialized = true;
+      notifyListeners();
+    }, onError: (error) {
+      // Ganti print() dengan debugPrint() untuk debugging
+      // Atau gunakan package logging yang lebih canggih seperti `logger`
+      debugPrint("Error listening to user document: $error"); // <-- Perubahan di sini
+      _isLoading = false;
+      _isInitialized = true;
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _authStateChangesSubscription?.cancel();
+    _userDocSubscription?.cancel();
+    super.dispose();
+  }
+
+  // Getters (tidak ada perubahan)
   String? get uid => _uid;
   String? get email => _email;
   String get role => _role;
@@ -21,6 +116,7 @@ class UserProvider with ChangeNotifier {
   bool? get isApproved => _isApproved;
   List<String>? get childIds => _childIds;
 
+  // Setters (tidak ada perubahan dalam implementasi yang relevan dengan error ini)
   void setUser(String? uid, String? email, String role, {String? fullName, String? schoolId, String? schoolName, String? profilePictureUrl, bool? isApproved, List<String>? childIds}) {
     _uid = uid;
     _email = email;
@@ -31,6 +127,8 @@ class UserProvider with ChangeNotifier {
     _profilePictureUrl = profilePictureUrl;
     _isApproved = isApproved;
     _childIds = childIds;
+    _isLoading = false;
+    _isInitialized = true;
     notifyListeners();
   }
 
@@ -44,6 +142,8 @@ class UserProvider with ChangeNotifier {
     _profilePictureUrl = null;
     _isApproved = null;
     _childIds = null;
+    _isLoading = false;
+    _isInitialized = true;
     notifyListeners();
   }
 

@@ -1,43 +1,63 @@
 import 'package:flutter/material.dart';
-import 'login/login_screen.dart';
+import 'package:provider/provider.dart';
+import '../provider/user_provider.dart'; // Import UserProvider
+import '../screens/main_screen.dart'; // Import MainScreen
 
-class SplashScreen2 extends StatelessWidget {
+class SplashScreen2 extends StatefulWidget {
   const SplashScreen2({super.key});
 
   @override
+  State<SplashScreen2> createState() => _SplashScreen2State();
+}
+
+class _SplashScreen2State extends State<SplashScreen2> {
+  @override
+  void initState() {
+    super.initState();
+    // Panggil fungsi untuk memeriksa user dan navigasi
+    _checkUserAndNavigate();
+  }
+
+  Future<void> _checkUserAndNavigate() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    // Langsung arahkan ke MainScreen setelah userProvider siap
+    // UserProvider akan secara otomatis mendengarkan auth state changes
+    // dan update role/data user.
+    // Kita perlu menunggu sebentar untuk memastikan stream authStateChanges
+    // dan stream dokumen user di UserProvider punya waktu untuk bekerja.
+
+    // Menunggu hingga UserProvider selesai memuat data awal
+    // Ini penting jika UserProvider melakukan fetching async di constructor/init
+    await userProvider.initializeUser(); // Panggil fungsi inisialisasi yang akan kita buat di UserProvider
+
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainScreen(),
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
+    return const Scaffold(
+      backgroundColor: Colors.blue, // Warna latar belakang splash screen 2
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Image.asset(
-                'assets/images/prabowo_gibran.png',
-                width: 180,
-              ),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
-            const SizedBox(height: 20),
-            const Text("Selamat Datang", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+            SizedBox(height: 20),
+            Text(
+              'Memuat data...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
               ),
-              child: const Text("Selanjutnya"),
             ),
           ],
         ),
