@@ -487,7 +487,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ),
           ),
 
-
           const SizedBox(height: 24),
           const Text("Statistik",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
@@ -498,8 +497,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
               _buildStatItem(Icons.people, "Siswa", "1,234", Colors.blue),
               _buildStatItem(Icons.restaurant, "Total diterima\n(Hari ini)",
                   "892", Colors.green),
-              _buildStatItem(Icons.pie_chart, "Total konsumsi\n(Mingguan)",
-                  "5,521", Colors.purple),
             ],
           ),
 
