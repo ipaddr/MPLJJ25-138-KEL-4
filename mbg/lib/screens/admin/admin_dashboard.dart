@@ -27,12 +27,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
   int pendingApprovalCount = 0;
   String schoolVerificationStatus = "Belum Mengajukan";
 
+  // Variabel baru untuk data statistik
+  int totalStudents = 0;
+  int totalReceivedToday = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchAdminProfile();
     _listenToParentApprovalRequests();
     _listenToSchoolVerificationStatus();
+    _fetchStatistics(); // Panggil fungsi baru untuk mengambil statistik
   }
 
   void _listenToParentApprovalRequests() {
@@ -44,7 +49,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     FirebaseFirestore.instance
         .collection('parentApprovalRequests')
         .where('schoolId', isEqualTo: adminSchoolId)
-        .where('status', isEqualTo: 'pending') 
+        .where('status', isEqualTo: 'pending')
         .snapshots()
         .listen((snapshot) {
       if (!mounted) return;
@@ -125,7 +130,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       } catch (e) {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            SnackBar(content: Text("Gagal memuat profil admin: $e"), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text("Gagal memuat profil admin: $e"),
+                backgroundColor: Colors.red),
           );
         }
       }
@@ -255,6 +262,59 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(content: Text("Gagal mengirim permintaan verifikasi: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // Fungsi baru untuk mengambil statistik
+  Future<void> _fetchStatistics() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    String? adminSchoolId = userProvider.schoolId;
+
+    if (adminSchoolId == null) return;
+
+    try {
+      // Ambil jumlah siswa
+      QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
+          .collection('students')
+          .where('schoolId', isEqualTo: adminSchoolId) // Filter berdasarkan schoolId
+          .get();
+      if (mounted) {
+        setState(() {
+          totalStudents = studentSnapshot.docs.length;
+        });
+      }
+
+      // Ambil total diterima hari ini dari dailyConsumptions
+      // Asumsikan dailyConsumptions memiliki field 'date' (timestamp) dan 'totalConsumed'
+      DateTime today = DateTime.now();
+      DateTime startOfToday = DateTime(today.year, today.month, today.day);
+      DateTime endOfToday = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+      QuerySnapshot consumptionSnapshot = await FirebaseFirestore.instance
+          .collection('dailyConsumptions')
+          .where('schoolId', isEqualTo: adminSchoolId) // Filter berdasarkan schoolId
+          .where('date', isGreaterThanOrEqualTo: startOfToday)
+          .where('date', isLessThanOrEqualTo: endOfToday)
+          .get();
+
+      int dailyTotal = 0;
+      for (var doc in consumptionSnapshot.docs) {
+        dailyTotal += (doc.get('totalConsumed') as num? ?? 0).toInt();
+      }
+
+      if (mounted) {
+        setState(() {
+          totalReceivedToday = dailyTotal;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Gagal memuat statistik: $e"),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -494,9 +554,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem(Icons.people, "Siswa", "1,234", Colors.blue),
+              _buildStatItem(Icons.people, "Siswa", totalStudents.toString(), Colors.blue), // Menggunakan data dinamis
               _buildStatItem(Icons.restaurant, "Total diterima\n(Hari ini)",
-                  "892", Colors.green),
+                  totalReceivedToday.toString(), Colors.green), // Menggunakan data dinamis
             ],
           ),
 
