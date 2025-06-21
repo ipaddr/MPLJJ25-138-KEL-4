@@ -5,12 +5,14 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../provider/user_provider.dart';
 import 'input_data_siswa_page.dart';
 import 'distribusi_makanan_page.dart';
 import 'laporan_konsumsi_page.dart';
 import 'parent_approval_page.dart';
 import '../guru/chatbot_page.dart';
+import '../../login/login_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -26,8 +28,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String? profileImageUrl;
   int pendingApprovalCount = 0;
   String schoolVerificationStatus = "Belum Mengajukan";
-
-  // Variabel baru untuk data statistik
   int totalStudents = 0;
   int totalReceivedToday = 0;
 
@@ -37,7 +37,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _fetchAdminProfile();
     _listenToParentApprovalRequests();
     _listenToSchoolVerificationStatus();
-    _fetchStatistics(); // Panggil fungsi baru untuk mengambil statistik
+    _fetchStatistics();
   }
 
   void _listenToParentApprovalRequests() {
@@ -218,14 +218,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
     if (uid == null || schoolId == null || currentSchoolName == null) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("ID Admin, Sekolah, atau Nama Sekolah tidak ditemukan. Pastikan Anda sudah terdaftar sebagai Admin Sekolah dengan nama sekolah."), backgroundColor: Colors.red),
+          const SnackBar(
+              content: Text(
+                  "ID Admin, Sekolah, atau Nama Sekolah tidak ditemukan. Pastikan Anda sudah terdaftar sebagai Admin Sekolah dengan nama sekolah."),
+              backgroundColor: Colors.red),
         );
       }
       return;
     }
 
     try {
-      QuerySnapshot existingRequest = await FirebaseFirestore.instance.collection('schoolVerificationRequests')
+      QuerySnapshot existingRequest = await FirebaseFirestore.instance
+          .collection('schoolVerificationRequests')
           .where('schoolId', isEqualTo: schoolId)
           .where('status', isEqualTo: 'pending')
           .limit(1)
@@ -234,7 +238,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (existingRequest.docs.isNotEmpty) {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(content: Text("Permintaan verifikasi sudah ada dan sedang menunggu proses."), backgroundColor: Colors.orange),
+            const SnackBar(
+                content: Text("Permintaan verifikasi sudah ada dan sedang menunggu proses."),
+                backgroundColor: Colors.orange),
           );
         }
         return;
@@ -255,30 +261,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
       });
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("Permintaan verifikasi sekolah berhasil dikirim ke Dinas Pendidikan!"), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text("Permintaan verifikasi sekolah berhasil dikirim ke Dinas Pendidikan!"),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(content: Text("Gagal mengirim permintaan verifikasi: $e"), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text("Gagal mengirim permintaan verifikasi: $e"),
+              backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // Fungsi baru untuk mengambil statistik
   Future<void> _fetchStatistics() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     String? adminSchoolId = userProvider.schoolId;
 
     if (adminSchoolId == null) return;
-
     try {
-      // Ambil jumlah siswa
       QuerySnapshot studentSnapshot = await FirebaseFirestore.instance
           .collection('students')
-          .where('schoolId', isEqualTo: adminSchoolId) // Filter berdasarkan schoolId
+          .where('schoolId', isEqualTo: adminSchoolId)
           .get();
       if (mounted) {
         setState(() {
@@ -286,15 +293,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         });
       }
 
-      // Ambil total diterima hari ini dari dailyConsumptions
-      // Asumsikan dailyConsumptions memiliki field 'date' (timestamp) dan 'totalConsumed'
       DateTime today = DateTime.now();
       DateTime startOfToday = DateTime(today.year, today.month, today.day);
       DateTime endOfToday = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
       QuerySnapshot consumptionSnapshot = await FirebaseFirestore.instance
           .collection('dailyConsumptions')
-          .where('schoolId', isEqualTo: adminSchoolId) // Filter berdasarkan schoolId
+          .where('schoolId', isEqualTo: adminSchoolId)
           .where('date', isGreaterThanOrEqualTo: startOfToday)
           .where('date', isLessThanOrEqualTo: endOfToday)
           .get();
@@ -315,6 +320,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
           SnackBar(
               content: Text("Gagal memuat statistik: $e"),
               backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    final currentContext = context;
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!currentContext.mounted) return;
+      Provider.of<UserProvider>(currentContext, listen: false).clearUser();
+      Navigator.of(currentContext).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal logout: $e"), backgroundColor: Colors.red),
         );
       }
     }
@@ -350,8 +374,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     String title,
     String subtitle,
     Color bgColor,
-    Widget page,
-  ) {
+    Widget page, {
+    VoidCallback? onTap,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -367,10 +392,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => page),
-        ),
+        onTap: onTap ??
+            () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => page),
+                ),
       ),
     );
   }
@@ -401,78 +427,64 @@ class _AdminDashboardState extends State<AdminDashboard> {
       verificationMessage = "Ajukan Verifikasi";
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: _pickAndUploadImage,
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundImage:
-                        currentProfileImage != null && currentProfileImage.isNotEmpty
-                            ? NetworkImage(currentProfileImage) as ImageProvider
-                            : const AssetImage('assets/images/foto.png'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(adminName,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    const Text("Admin Sekolah", style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-                const Spacer(),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ChatbotPage()),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          const Icon(Icons.smart_toy, size: 28),
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
-                            ),
-                          ),
-                        ],
-                      ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Dashboard Admin"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _pickAndUploadImage,
+                    child: CircleAvatar(
+                      radius: 30,
+                      backgroundImage:
+                          currentProfileImage != null && currentProfileImage.isNotEmpty
+                              ? NetworkImage(currentProfileImage) as ImageProvider
+                              : const AssetImage('assets/images/foto.png'),
                     ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ParentApprovalPage()),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          const Icon(Icons.notifications_none, size: 28),
-                          if (pendingApprovalCount > 0)
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(adminName,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text("Admin Sekolah",
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ChatbotPage()),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            const Icon(Icons.smart_toy, size: 28),
                             Positioned(
                               right: 0,
                               child: Container(
@@ -481,119 +493,173 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                   color: Colors.red,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Text(
-                                  pendingApprovalCount.toString(),
-                                  style: const TextStyle(fontSize: 10, color: Colors.white),
-                                ),
+                                child: const Text('!',
+                                    style: TextStyle(fontSize: 10, color: Colors.white)),
                               ),
                             ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ParentApprovalPage()),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            const Icon(Icons.notifications_none, size: 28),
+                            if (pendingApprovalCount > 0)
+                              Positioned(
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    pendingApprovalCount.toString(),
+                                    style:
+                                        const TextStyle(fontSize: 10, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const Text("Verifikasi Sekolah",
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    readOnly: true,
+                    controller: TextEditingController(text: schoolName),
+                    decoration: InputDecoration(
+                      hintText: "Nama Sekolah",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      isDense: true,
                     ),
-                  ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: verificationColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: isSchoolVerified
+                      ? Tooltip(
+                          message: "Sekolah ini telah diverifikasi oleh Dinas Pendidikan.",
+                          child: Icon(verificationIcon, color: Colors.green.shade800),
+                        )
+                      : IconButton(
+                          icon: Icon(verificationIcon,
+                              color: verificationIcon == Icons.gpp_maybe
+                                  ? Colors.blue.shade800
+                                  : (verificationIcon == Icons.pending
+                                      ? Colors.orange.shade800
+                                      : Colors.red.shade800)),
+                          onPressed: schoolVerificationStatus == 'pending' ||
+                                  schoolVerificationStatus == 'approved'
+                              ? null
+                              : _requestSchoolVerification,
+                        ),
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 20),
-          const Text("Verifikasi Sekolah", style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  readOnly: true,
-                  controller: TextEditingController(text: schoolName),
-                  decoration: InputDecoration(
-                    hintText: "Nama Sekolah",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    isDense: true,
-                  ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                verificationMessage,
+                style: TextStyle(
+                  color: verificationIcon == Icons.gpp_maybe
+                      ? Colors.blue.shade800
+                      : (verificationIcon == Icons.pending
+                          ? Colors.orange.shade800
+                          : (verificationIcon == Icons.cancel
+                              ? Colors.red.shade800
+                              : Colors.green.shade800)),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: verificationColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: isSchoolVerified
-                    ? Tooltip(
-                        message: "Sekolah ini telah diverifikasi oleh Dinas Pendidikan.",
-                        child: Icon(verificationIcon, color: Colors.green.shade800),
-                      )
-                    : IconButton(
-                        icon: Icon(verificationIcon, color: verificationIcon == Icons.gpp_maybe ? Colors.blue.shade800 : (verificationIcon == Icons.pending ? Colors.orange.shade800 : Colors.red.shade800)),
-                        onPressed: schoolVerificationStatus == 'pending' || schoolVerificationStatus == 'approved'
-                            ? null
-                            : _requestSchoolVerification,
-                      ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              verificationMessage,
-              style: TextStyle(
-                color: verificationIcon == Icons.gpp_maybe ? Colors.blue.shade800 : (verificationIcon == Icons.pending ? Colors.orange.shade800 : (verificationIcon == Icons.cancel ? Colors.red.shade800 : Colors.green.shade800)),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
               ),
             ),
-          ),
 
-          const SizedBox(height: 24),
-          const Text("Statistik",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem(Icons.people, "Siswa", totalStudents.toString(), Colors.blue), // Menggunakan data dinamis
-              _buildStatItem(Icons.restaurant, "Total diterima\n(Hari ini)",
-                  totalReceivedToday.toString(), Colors.green), // Menggunakan data dinamis
-            ],
-          ),
+            const SizedBox(height: 24),
+            const Text("Statistik",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem(Icons.people, "Siswa",
+                    totalStudents.toString(), Colors.blue),
+                _buildStatItem(Icons.restaurant, "Total diterima\n(Hari ini)",
+                    totalReceivedToday.toString(), Colors.green),
+              ],
+            ),
 
-          const SizedBox(height: 32),
-          const Text("Menu",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 12),
-          _buildMenuItem(
+            const SizedBox(height: 32),
+            const Text("Menu",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 12),
+            _buildMenuItem(
+                context,
+                Icons.school,
+                "Input Data Siswa",
+                "Kelola informasi siswa",
+                Colors.blue.shade100,
+                const InputDataSiswaPage()),
+            _buildMenuItem(
+                context,
+                Icons.rice_bowl,
+                "Distribusi Makanan",
+                "Lacak distribusi harian",
+                Colors.green.shade100,
+                const DistribusiMakananPage()),
+            _buildMenuItem(
+                context,
+                Icons.bar_chart,
+                "Laporan Konsumsi",
+                "Lihat statistik harian",
+                Colors.purple.shade100,
+                const LaporanKonsumsiPage()),
+            _buildMenuItem(
               context,
-              Icons.school,
-              "Input Data Siswa",
-              "Kelola informasi siswa",
-              Colors.blue.shade100,
-              const InputDataSiswaPage()),
-          _buildMenuItem(
+              Icons.approval,
+              "Permintaan Akses Orang Tua",
+              "Setujui atau tolak permintaan akses orang tua",
+              Colors.orange.shade100,
+              const ParentApprovalPage(),
+            ),
+            
+            _buildMenuItem(
               context,
-              Icons.rice_bowl,
-              "Distribusi Makanan",
-              "Lacak distribusi harian",
-              Colors.green.shade100,
-              const DistribusiMakananPage()),
-          _buildMenuItem(
-              context,
-              Icons.bar_chart,
-              "Laporan Konsumsi",
-              "Lihat statistik harian",
-              Colors.purple.shade100,
-              const LaporanKonsumsiPage()),
-          _buildMenuItem(
-            context,
-            Icons.approval,
-            "Permintaan Akses Orang Tua",
-            "Setujui atau tolak permintaan akses orang tua",
-            Colors.orange.shade100,
-            const ParentApprovalPage(),
-          ),
-        ],
+              Icons.logout,
+              "Logout",
+              "Keluar dari akun Anda",
+              Colors.red.shade100,
+              Container(),
+              onTap: _logout,
+            ),
+          ],
+        ),
       ),
     );
   }

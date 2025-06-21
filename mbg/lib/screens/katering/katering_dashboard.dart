@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../guru/chatbot_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../../provider/user_provider.dart';
+import '../../login/login_screen.dart';
 
 class KateringDashboard extends StatefulWidget {
   const KateringDashboard({super.key});
@@ -251,6 +255,25 @@ class _KateringDashboardState extends State<KateringDashboard> {
     }
   }
 
+  Future<void> _logout() async {
+    final currentContext = context;
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!currentContext.mounted) return;
+      Provider.of<UserProvider>(currentContext, listen: false).clearUser();
+      Navigator.of(currentContext).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal logout: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateFormat("EEEE, d MMMM yyyy", 'id_ID').format(DateTime.now());
@@ -258,9 +281,44 @@ class _KateringDashboardState extends State<KateringDashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 0,
+        backgroundColor: Colors.blue.shade800,
+        foregroundColor: Colors.white,
+        title: const Text("Dashboard Tim Katering"),
+        actions: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotPage()),
+              );
+            },
+            child: Stack(
+              children: [
+                const Icon(Icons.smart_toy, size: 28),
+                Positioned(
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.notifications_none, size: 28),
+          const SizedBox(width: 12),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -281,36 +339,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ChatbotPage()),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          const Icon(Icons.smart_toy, size: 28),
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(Icons.notifications_none, size: 28),
                   ],
                 ),
               ],
@@ -383,15 +411,13 @@ class _KateringDashboardState extends State<KateringDashboard> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      dailyMenu != null &&
-                              qualityChecked &&
-                              commentController.text.trim().isNotEmpty
-                          ? _markReadyForDistribution
-                          : null,
+                  onPressed: dailyMenu != null &&
+                          qualityChecked &&
+                          commentController.text.trim().isNotEmpty
+                      ? _markReadyForDistribution
+                      : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isReady ? Colors.green : const Color(0xFF2962FF),
+                    backgroundColor: isReady ? Colors.green : const Color(0xFF2962FF),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -489,18 +515,17 @@ class _KateringDashboardState extends State<KateringDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Karbohidrat  : ${dailyMenu?['carbohydrate'] ?? 'N/A'}"),
-              Text("Protein      : ${dailyMenu?['protein'] ?? 'N/A'}"),
-              Text("Sayur        : ${dailyMenu?['vegetable'] ?? 'N/A'}"),
-              Text("Buah         : ${dailyMenu?['fruit'] ?? 'N/A'}"),
-              Text("Susu         : ${dailyMenu?['milk'] ?? 'N/A'}"),
+              Text("Karbohidrat    : ${dailyMenu?['carbohydrate'] ?? 'N/A'}"),
+              Text("Protein        : ${dailyMenu?['protein'] ?? 'N/A'}"),
+              Text("Sayur          : ${dailyMenu?['vegetable'] ?? 'N/A'}"),
+              Text("Buah           : ${dailyMenu?['fruit'] ?? 'N/A'}"),
+              Text("Susu           : ${dailyMenu?['milk'] ?? 'N/A'}"),
             ],
           ),
         ),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed:
-              _saveOrUpdateDailyMenu,
+          onPressed: _saveOrUpdateDailyMenu,
           child: const Text("Update Menu"),
         ),
       ],

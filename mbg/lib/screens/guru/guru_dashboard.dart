@@ -5,11 +5,13 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../provider/user_provider.dart';
 import 'evaluasi_nilai_page.dart';
 import 'penilaian_pemahaman_page.dart';
 import 'rekap_mingguan_page.dart';
 import 'chatbot_page.dart';
+import '../../login/login_screen.dart';
 
 class GuruDashboard extends StatefulWidget {
   const GuruDashboard({super.key});
@@ -114,6 +116,25 @@ class _GuruDashboardState extends State<GuruDashboard> {
     }
   }
 
+  Future<void> _logout() async {
+    final currentContext = context;
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!currentContext.mounted) return;
+      Provider.of<UserProvider>(currentContext, listen: false).clearUser();
+      Navigator.of(currentContext).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal logout: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Widget _buildMenuItem(
     BuildContext context, {
     required String title,
@@ -141,112 +162,134 @@ class _GuruDashboardState extends State<GuruDashboard> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final currentProfileImage = userProvider.profilePictureUrl;
+    final currentProfileImage = profileImageUrl ?? userProvider.profilePictureUrl;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Dashboard Guru"),
+        backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
+        actions: [
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotPage()),
+              );
+            },
+            child: Stack(
               children: [
-                GestureDetector(
-                  onTap: _pickAndUploadImage,
-                  child: CircleAvatar(
-                    radius: 28,
-                    backgroundImage: currentProfileImage != null && currentProfileImage.isNotEmpty
-                        ? NetworkImage(currentProfileImage) as ImageProvider
-                        : const AssetImage('assets/images/guru_profile.jpg'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(guruName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text(guruRoleDisplay, style: const TextStyle(color: Colors.grey)),
-                  ],
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ChatbotPage()),
-                    );
-                  },
-                  child: Stack(
-                    children: [
-                      const Icon(Icons.smart_toy, size: 28),
-                      Positioned(
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Stack( 
-                  children: [
-                    const Icon(Icons.notifications_none, size: 28),
-                    Positioned(
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Text('3', style: TextStyle(fontSize: 10, color: Colors.white)),
-                      ),
+                const Icon(Icons.smart_toy, size: 28),
+                Positioned(
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
                     ),
-                  ],
+                    child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          const SizedBox(height: 24),
-          const Text("Menu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          _buildMenuItem(
-            context,
-            title: "Evaluasi Nilai Akademik",
-            subtitle: "Tinjau dan perbarui nilai siswa",
-            icon: Icons.school,
-            iconColor: Colors.blue,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EvaluasiNilaiPage())),
+          const SizedBox(width: 12),
+          Stack(
+            children: [
+              const Icon(Icons.notifications_none, size: 28),
+              Positioned(
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('3', style: TextStyle(fontSize: 10, color: Colors.white)),
+                ),
+              ),
+            ],
           ),
-          _buildMenuItem(
-            context,
-            title: "Penilaian Pemahaman",
-            subtitle: "Lacak pemahaman siswa",
-            icon: Icons.menu_book,
-            iconColor: Colors.green,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PenilaianPemahamanPage())),
+          const SizedBox(width: 12),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
           ),
-          _buildMenuItem(
-            context,
-            title: "Rekap Mingguan",
-            subtitle: "Melihat ringkasan kinerja kelas",
-            icon: Icons.show_chart,
-            iconColor: Colors.purple,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RekapMingguanPage())),
-          ),
+          const SizedBox(width: 8),
         ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _pickAndUploadImage,
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundImage: currentProfileImage != null && currentProfileImage.isNotEmpty
+                          ? NetworkImage(currentProfileImage) as ImageProvider
+                          : const AssetImage('assets/images/guru_profile.jpg'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(guruName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(guruRoleDisplay, style: const TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text("Menu", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _buildMenuItem(
+              context,
+              title: "Evaluasi Nilai Akademik",
+              subtitle: "Tinjau dan perbarui nilai siswa",
+              icon: Icons.school,
+              iconColor: Colors.blue,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EvaluasiNilaiPage())),
+            ),
+            _buildMenuItem(
+              context,
+              title: "Penilaian Pemahaman",
+              subtitle: "Lacak pemahaman siswa",
+              icon: Icons.menu_book,
+              iconColor: Colors.green,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PenilaianPemahamanPage())),
+            ),
+            _buildMenuItem(
+              context,
+              title: "Rekap Mingguan",
+              subtitle: "Melihat ringkasan kinerja kelas",
+              icon: Icons.show_chart,
+              iconColor: Colors.purple,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RekapMingguanPage())),
+            ),
+            _buildMenuItem(
+              context,
+              title: "Logout",
+              subtitle: "Keluar dari akun Anda",
+              icon: Icons.logout,
+              iconColor: Colors.red,
+              onTap: _logout,
+            ),
+          ],
+        ),
       ),
     );
   }

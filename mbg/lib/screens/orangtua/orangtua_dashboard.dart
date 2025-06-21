@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../provider/user_provider.dart';
 import 'package:intl/intl.dart';
 import '../guru/chatbot_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../login/login_screen.dart';
 
 class OrangTuaDashboard extends StatefulWidget {
   const OrangTuaDashboard({super.key});
@@ -39,12 +41,15 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       parentName = userProvider.fullName!;
     }
 
-    if (userProvider.isApproved == true && userProvider.childIds != null && userProvider.childIds!.isNotEmpty) {
+    if (userProvider.isApproved == true &&
+        userProvider.childIds != null &&
+        userProvider.childIds!.isNotEmpty) {
       if (_pendingRequest != null && _pendingRequest!['status'] == 'pending') {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Permintaan akses disetujui! Silakan klik 'Lihat Dashboard Anak'."),
+              content:
+                  Text("Permintaan akses disetujui! Silakan klik 'Lihat Dashboard Anak'."),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 5),
             ),
@@ -66,7 +71,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       });
     }
   }
-
 
   void _listenToPendingRequests() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -95,7 +99,8 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     if (uid == null) return;
 
     try {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (!currentContext.mounted) return;
 
       if (userDoc.exists) {
@@ -106,7 +111,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(content: Text("Gagal memuat profil orang tua: $e"), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text("Gagal memuat profil orang tua: $e"),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -120,7 +127,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     if (parentUid == null) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("Anda harus login untuk mengajukan permintaan."), backgroundColor: Colors.red),
+          const SnackBar(
+              content: Text("Anda harus login untuk mengajukan permintaan."),
+              backgroundColor: Colors.red),
         );
       }
       return;
@@ -129,7 +138,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     if (nisController.text.isEmpty || sekolahController.text.isEmpty) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text("Harap isi NIS Anak dan Nama Sekolah."), backgroundColor: Colors.red),
+          const SnackBar(
+              content: Text("Harap isi NIS Anak dan Nama Sekolah."),
+              backgroundColor: Colors.red),
         );
       }
       return;
@@ -139,7 +150,8 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     String? schoolIdOfStudent;
 
     try {
-      QuerySnapshot schoolQuerySnapshot = await FirebaseFirestore.instance.collection('schools')
+      QuerySnapshot schoolQuerySnapshot = await FirebaseFirestore.instance
+          .collection('schools')
           .where('schoolName', isEqualTo: sekolahController.text.trim())
           .limit(1)
           .get();
@@ -147,7 +159,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       if (schoolQuerySnapshot.docs.isEmpty) {
         if (currentContext.mounted) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(content: Text("Nama sekolah tidak ditemukan atau belum diverifikasi oleh Dinas."), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text("Nama sekolah tidak ditemukan atau belum diverifikasi oleh Dinas."),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -155,7 +169,8 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
 
       schoolIdOfStudent = schoolQuerySnapshot.docs.first.id;
 
-      QuerySnapshot studentQuerySnapshot = await FirebaseFirestore.instance.collection('students')
+      QuerySnapshot studentQuerySnapshot = await FirebaseFirestore.instance
+          .collection('students')
           .where('nis', isEqualTo: nisController.text.trim())
           .where('schoolId', isEqualTo: schoolIdOfStudent)
           .limit(1)
@@ -182,7 +197,9 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
       });
       if (!currentContext.mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
-        const SnackBar(content: Text("Permintaan akses berhasil dikirim! Menunggu persetujuan Admin Sekolah."), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text("Permintaan akses berhasil dikirim! Menunggu persetujuan Admin Sekolah."),
+            backgroundColor: Colors.green),
       );
       setState(() {
         _pendingRequest = {
@@ -195,7 +212,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
           'requestedAt': Timestamp.now(),
         };
       });
-
     } catch (e) {
       if (currentContext.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -208,7 +224,8 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
   Future<void> _fetchChildData(String childId) async {
     final currentContext = context;
     try {
-      DocumentSnapshot childDoc = await FirebaseFirestore.instance.collection('students').doc(childId).get();
+      DocumentSnapshot childDoc =
+          await FirebaseFirestore.instance.collection('students').doc(childId).get();
       if (!currentContext.mounted) return;
 
       if (childDoc.exists) {
@@ -217,8 +234,10 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         });
 
         final todayFormatted = DateFormat('yyyy-MM-dd').format(DateTime.now());
-        DocumentSnapshot consumptionDoc = await FirebaseFirestore.instance.collection('dailyConsumptions')
-            .doc('${childId}_$todayFormatted').get();
+        DocumentSnapshot consumptionDoc = await FirebaseFirestore.instance
+            .collection('dailyConsumptions')
+            .doc('${childId}_$todayFormatted')
+            .get();
 
         if (!currentContext.mounted) return;
         if (consumptionDoc.exists) {
@@ -229,7 +248,7 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
             };
           });
         } else {
-           setState(() {
+          setState(() {
             childDailyConsumption[childId] = {
               'makanPagi': false,
               'makanSiang': false,
@@ -246,69 +265,96 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
     }
   }
 
+  Future<void> _logout() async {
+    final currentContext = context;
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!currentContext.mounted) return;
+      Provider.of<UserProvider>(currentContext, listen: false).clearUser();
+      Navigator.of(currentContext).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal logout: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundImage: userProvider.profilePictureUrl != null && userProvider.profilePictureUrl!.isNotEmpty
+                  ? NetworkImage(userProvider.profilePictureUrl!) as ImageProvider
+                  : const AssetImage('assets/images/foto.png'),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(parentName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('Orang Tua', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.smart_toy),
+                Positioned(
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text('!', style: TextStyle(fontSize: 8, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotPage()),
+              );
+            },
+            tooltip: 'Chatbot',
+          ),
+          const IconButton(
+            icon: Icon(Icons.notifications_none),
+            onPressed: null,
+            tooltip: 'Notifikasi',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundImage: AssetImage('assets/images/foto.png'),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(parentName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          const Text('Orang Tua', style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ChatbotPage()),
-                          );
-                        },
-                        child: Stack(
-                          children: [
-                            const Icon(Icons.smart_toy, size: 28),
-                            Positioned(
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.notifications_none),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               if (!userProvider.isApproved!)
                 _buildApprovalRequestFormWithDynamicStatus()
               else if (_showChildDashboardButton && !_isChildDashboardVisible)

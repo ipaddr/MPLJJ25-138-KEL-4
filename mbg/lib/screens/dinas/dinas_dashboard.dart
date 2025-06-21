@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import '../admin/laporan_konsumsi_page.dart';
 import 'dinas_school_verification_page.dart';
 import '../guru/chatbot_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../login/login_screen.dart';
 
 class DinasDashboard extends StatefulWidget {
   const DinasDashboard({super.key});
@@ -69,9 +71,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
     final currentContext = context;
     try {
       QuerySnapshot schoolSnapshot =
-          await FirebaseFirestore.instance
-              .collection('schools')
-              .get();
+          await FirebaseFirestore.instance.collection('schools').get();
 
       if (!currentContext.mounted) return;
 
@@ -89,9 +89,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
       if (!currentContext.mounted) return;
       int tempTotalStudents = studentSnapshot.docs.length;
       QuerySnapshot academicEvaluationsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('academicEvaluations')
-              .get();
+          await FirebaseFirestore.instance.collection('academicEvaluations').get();
       if (!currentContext.mounted) return;
 
       int totalAcademicScores = 0;
@@ -127,12 +125,11 @@ class _DinasDashboardState extends State<DinasDashboard> {
   Future<void> _fetchTeacherComments() async {
     final currentContext = context;
     try {
-      QuerySnapshot commentSnapshot =
-          await FirebaseFirestore.instance
-              .collection('teacherComments')
-              .orderBy('commentedAt', descending: true)
-              .limit(10)
-              .get();
+      QuerySnapshot commentSnapshot = await FirebaseFirestore.instance
+          .collection('teacherComments')
+          .orderBy('commentedAt', descending: true)
+          .limit(10)
+          .get();
 
       if (!currentContext.mounted) return;
 
@@ -190,16 +187,14 @@ class _DinasDashboardState extends State<DinasDashboard> {
   Future<void> _fetchEvaluationChartData() async {
     final currentContext = context;
     try {
-      QuerySnapshot evaluationSnapshot =
-          await FirebaseFirestore.instance
-              .collection('academicEvaluations')
-              .orderBy('evaluationDate')
-              .get();
+      QuerySnapshot evaluationSnapshot = await FirebaseFirestore.instance
+          .collection('academicEvaluations')
+          .orderBy('evaluationDate')
+          .get();
 
       if (!currentContext.mounted) return;
 
-      Map<String, List<int>> monthlyScores =
-          {};
+      Map<String, List<int>> monthlyScores = {};
 
       for (var doc in evaluationSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
@@ -207,8 +202,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
         DateTime date = timestamp.toDate();
         String monthKey = DateFormat('yyyy-MM').format(date);
 
-        int score =
-            data['afterMbgScore'] ?? 0;
+        int score = data['afterMbgScore'] ?? 0;
 
         if (!monthlyScores.containsKey(monthKey)) {
           monthlyScores[monthKey] = [];
@@ -217,16 +211,13 @@ class _DinasDashboardState extends State<DinasDashboard> {
       }
 
       List<FlSpot> tempSpots = [];
-      List<String> sortedMonths =
-          monthlyScores.keys.toList()..sort();
+      List<String> sortedMonths = monthlyScores.keys.toList()..sort();
 
       for (int i = 0; i < sortedMonths.length; i++) {
         String month = sortedMonths[i];
         List<int> scores = monthlyScores[month]!;
         double avg =
-            scores.isNotEmpty
-                ? scores.reduce((a, b) => a + b) / scores.length
-                : 0.0;
+            scores.isNotEmpty ? scores.reduce((a, b) => a + b) / scores.length : 0.0;
         tempSpots.add(FlSpot(i.toDouble(), avg));
       }
 
@@ -240,6 +231,25 @@ class _DinasDashboardState extends State<DinasDashboard> {
             content: Text("Gagal memuat data grafik evaluasi: $e"),
             backgroundColor: Colors.red,
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    final currentContext = context;
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!currentContext.mounted) return;
+      Provider.of<UserProvider>(currentContext, listen: false).clearUser();
+      Navigator.of(currentContext).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      if (currentContext.mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          SnackBar(content: Text("Gagal logout: $e"), backgroundColor: Colors.red),
         );
       }
     }
@@ -268,9 +278,8 @@ class _DinasDashboardState extends State<DinasDashboard> {
   Widget _grafikEvaluasi() {
     double maxY = 100;
     if (evaluationSpots.isNotEmpty) {
-      double maxScore = evaluationSpots
-          .map((e) => e.y)
-          .reduce((a, b) => a > b ? a : b);
+      double maxScore =
+          evaluationSpots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
       if (maxScore > maxY) {
         maxY = maxScore * 1.1;
       }
@@ -363,10 +372,7 @@ class _DinasDashboardState extends State<DinasDashboard> {
               border: Border.all(color: const Color(0xff37434d), width: 1),
             ),
             minX: 0,
-            maxX:
-                evaluationSpots.isNotEmpty
-                    ? evaluationSpots.length - 1.0
-                    : 0,
+            maxX: evaluationSpots.isNotEmpty ? evaluationSpots.length - 1.0 : 0,
             minY: 0,
             maxY: maxY,
             lineBarsData: [
@@ -428,7 +434,8 @@ class _DinasDashboardState extends State<DinasDashboard> {
                       color: Colors.red,
                       shape: BoxShape.circle,
                     ),
-                    child: const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
+                    child:
+                        const Text('!', style: TextStyle(fontSize: 10, color: Colors.white)),
                   ),
                 ),
               ],
@@ -442,14 +449,8 @@ class _DinasDashboardState extends State<DinasDashboard> {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Logout berhasil!"),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
+            onPressed: _logout,
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -545,14 +546,13 @@ class _DinasDashboardState extends State<DinasDashboard> {
                       "${comment['teacherName'] ?? 'Guru'} dari ${comment['schoolName'] ?? 'Sekolah Tidak Diketahui'}",
                     ),
                     subtitle: Text(comment['comment'] ?? 'Tidak ada komentar'),
-                    trailing:
-                        comment['commentedAt'] != null
-                            ? Text(
-                              DateFormat('dd/MM/yyyy').format(
-                                (comment['commentedAt'] as Timestamp).toDate(),
-                              ),
-                            )
-                            : const Text(''),
+                    trailing: comment['commentedAt'] != null
+                        ? Text(
+                            DateFormat('dd/MM/yyyy').format(
+                              (comment['commentedAt'] as Timestamp).toDate(),
+                            ),
+                          )
+                        : const Text(''),
                   ),
                 ),
               ),
