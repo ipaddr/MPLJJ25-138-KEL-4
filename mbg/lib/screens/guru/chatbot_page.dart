@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ChatMessage {
   final String text;
   final bool isUserMessage;
@@ -17,7 +19,6 @@ class ChatbotPage extends StatefulWidget {
 class _ChatbotPageState extends State<ChatbotPage> {
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
-  final String _apiKey = "AIzaSyBx3AA2QHs0Pv4QP_-K9rZl9Yjzck0ci6k";
   
   GenerativeModel? _model;
   ChatSession? _chat;
@@ -25,7 +26,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   void initState() {
     super.initState();
-    _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: _apiKey);
+    final String? apiKey = dotenv.env['GEMINI_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      // Tangani jika API Key tidak ditemukan (misalnya tampilkan error)
+      throw Exception("Gemini API Key tidak ditemukan di environment variables.");
+    }
+    _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
     _chat = _model!.startChat();
     _addMessage(ChatMessage(text: "Halo! Saya adalah Chatbot Gizi. Ada yang bisa saya bantu terkait nutrisi atau makanan?", isUserMessage: false));
   }
