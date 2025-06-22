@@ -44,6 +44,114 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  Widget _buildCustomTextField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    TextInputType? keyboardType,
+    IconData? prefixIcon,
+    Widget? suffixIcon,
+    bool obscureText = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            obscureText: obscureText,
+            decoration: InputDecoration(
+              hintText: hint,
+              prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.blue) : null,
+              suffixIcon: suffixIcon,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomDropdownField({
+    required String label,
+    required List<String> items,
+    String? value,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              hintText: "Pilih role",
+              prefixIcon: const Icon(Icons.person_outline, color: Colors.blue),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            ),
+            value: value,
+            items: items
+                .map((item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(item),
+                    ))
+                .toList(),
+            onChanged: onChanged,
+            isExpanded: true,
+            icon: const Icon(Icons.arrow_drop_down, color: Colors.blue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton(String text, VoidCallback onPressed) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue.shade700,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 5,
+          shadowColor: Colors.blue.shade200.withOpacity(0.5),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,42 +159,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        toolbarHeight: 0,
-        leading:
-            step ==
-                    2
-                ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => setState(() => step = 1),
-                )
-                : null,
+        leading: step == 2
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                onPressed: () => setState(() => step = 1),
+              )
+            : null,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Text(
-                step == 1
-                    ? "Informasi Pribadi"
-                    : "Buat Akun & Role",
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+            Text(
+              step == 1 ? "Daftar Akun Baru" : "Informasi Akun",
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 24),
-            if (step == 1) ...[
-              _buildField(
-                "Nama Lengkap",
-                "Isi nama lengkap",
-                fullNameController,
+            const SizedBox(height: 8),
+            Text(
+              step == 1
+                  ? "Mari buat akun Anda dengan mengisi informasi dasar."
+                  : "Hampir selesai! Buat password dan pilih role Anda.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
               ),
-              _buildField("Email", "your@email.com", emailController),
-              _buildField("No. Handphone", "012345678901", phoneController),
-              const SizedBox(height: 32),
+            ),
+            const SizedBox(height: 40),
+
+            if (step == 1) ...[
+              _buildCustomTextField(
+                label: "Nama Lengkap",
+                hint: "Contoh: Budi Santoso",
+                controller: fullNameController,
+                prefixIcon: Icons.person_outline,
+              ),
+              _buildCustomTextField(
+                label: "Email",
+                hint: "emailanda@contoh.com",
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                prefixIcon: Icons.email_outlined,
+              ),
+              _buildCustomTextField(
+                label: "No. Handphone",
+                hint: "0812xxxxxxxx",
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                prefixIcon: Icons.phone_outlined,
+              ),
+              const SizedBox(height: 24),
               _buildPrimaryButton("Selanjutnya", () {
                 if (fullNameController.text.isEmpty ||
                     emailController.text.isEmpty ||
@@ -102,43 +230,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 setState(() => step = 2);
               }),
             ] else ...[
-              _buildPasswordField(
-                "Password",
-                passwordController,
-                showPassword,
-                () => setState(() => showPassword = !showPassword),
+              _buildCustomTextField(
+                label: "Password",
+                hint: "••••••••",
+                controller: passwordController,
+                obscureText: !showPassword,
+                prefixIcon: Icons.lock_outline,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    showPassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey.shade600,
+                  ),
+                  onPressed: () => setState(() => showPassword = !showPassword),
+                ),
               ),
-              _buildPasswordField(
-                "Konfirmasi Password",
-                confirmPasswordController,
-                showConfirmPassword,
-                () =>
-                    setState(() => showConfirmPassword = !showConfirmPassword),
+              _buildCustomTextField(
+                label: "Konfirmasi Password",
+                hint: "••••••••",
+                controller: confirmPasswordController,
+                obscureText: !showConfirmPassword,
+                prefixIcon: Icons.lock_outline,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    showConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey.shade600,
+                  ),
+                  onPressed: () => setState(() => showConfirmPassword = !showConfirmPassword),
+                ),
               ),
-              _buildRoleDropdown(),
-              const SizedBox(height: 20),
+              _buildCustomDropdownField(
+                label: "Pilih Role",
+                items: roles,
+                value: selectedRole,
+                onChanged: (value) {
+                  setState(() {
+                    selectedRole = value;
+                    schoolNisInputController.clear();
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
               if (selectedRole == 'Admin Sekolah' ||
                   selectedRole == 'Guru' ||
                   selectedRole == 'Tim Katering')
-                _buildField(
-                  "Nama Sekolah",
-                  "Isi nama sekolah",
-                  schoolNisInputController,
+                _buildCustomTextField(
+                  label: "Nama Sekolah",
+                  hint: "Isi nama sekolah",
+                  controller: schoolNisInputController,
+                  prefixIcon: Icons.home_outlined,
                 )
               else if (selectedRole == 'Orang Tua')
-                _buildField(
-                  "NIS Anak",
-                  "Masukkan NIS anak",
-                  schoolNisInputController,
+                _buildCustomTextField(
+                  label: "NIS Anak",
+                  hint: "Masukkan NIS anak",
+                  controller: schoolNisInputController,
+                  keyboardType: TextInputType.number,
+                  prefixIcon: Icons.child_care_outlined,
                 )
               else if (selectedRole == 'Dinas Pendidikan')
-                _buildField(
-                  "Nama Dinas",
-                  "Isi nama dinas",
-                  schoolNisInputController,
+                _buildCustomTextField(
+                  label: "Nama Dinas",
+                  hint: "Isi nama dinas",
+                  controller: schoolNisInputController,
+                  prefixIcon: Icons.account_balance_outlined,
                 ),
-
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               _buildPrimaryButton("Buat Akun", () async {
                 final currentContext = context;
 
@@ -272,15 +428,74 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }
                     }
                   } else if (selectedRole == 'Orang Tua') {
-                    userData['childNisRequest'] =
-                        schoolNisInputController.text
-                            .trim();
-                    userData['isApproved'] = false;
-                    userData['childIds'] =
-                        [];
+                    QuerySnapshot studentSnap = await FirebaseFirestore.instance
+                        .collection('students')
+                        .where('nis', isEqualTo: schoolNisInputController.text.trim())
+                        .limit(1)
+                        .get();
+
+                    if (studentSnap.docs.isNotEmpty) {
+                      userData['childIds'] = [studentSnap.docs.first.id];
+                      userData['schoolId'] = studentSnap.docs.first['schoolId'];
+                      userData['schoolName'] = studentSnap.docs.first['schoolName'];
+                      userData['isApproved'] = false;
+                      await FirebaseFirestore.instance.collection('parentApprovalRequests').add({
+                        'parentId': userCredential.user!.uid,
+                        'parentName': fullNameController.text.trim(),
+                        'childId': studentSnap.docs.first.id,
+                        'childNis': schoolNisInputController.text.trim(),
+                        'schoolId': studentSnap.docs.first['schoolId'],
+                        'schoolName': studentSnap.docs.first['schoolName'],
+                        'status': 'pending',
+                        'requestedAt': Timestamp.now(),
+                      });
+                    } else {
+                      if (currentContext.mounted) {
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "NIS anak tidak ditemukan di database manapun. Harap pastikan NIS benar atau hubungi Admin Sekolah.",
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                      userData['childIds'] = [];
+                      userData['isApproved'] = false;
+                    }
                   } else if (selectedRole == 'Dinas Pendidikan') {
                     userData['dinasName'] =
                         schoolNisInputController.text.trim();
+                  } else if (selectedRole == 'Tim Katering') {
+                     userData['schoolName'] =
+                        schoolNisInputController.text
+                            .trim();
+                    QuerySnapshot schoolSnap =
+                        await FirebaseFirestore.instance
+                            .collection('schools')
+                            .where(
+                              'schoolName',
+                              isEqualTo: schoolNisInputController.text.trim(),
+                            )
+                            .limit(1)
+                            .get();
+                    if (schoolSnap.docs.isNotEmpty) {
+                      schoolIdToLink = schoolSnap.docs.first.id;
+                      userData['schoolId'] = schoolIdToLink;
+                    } else {
+                      userData['schoolId'] =
+                          null;
+                      if (currentContext.mounted) {
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Nama sekolah tidak ditemukan. Tim Katering perlu didaftarkan ke sekolah yang sudah ada.",
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
                   }
 
                   await FirebaseFirestore.instance
@@ -329,7 +544,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 }
               }),
             ],
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             Center(
               child: GestureDetector(
                 onTap: () {
@@ -338,162 +553,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 },
-                child: const Text.rich(
+                child: Text.rich(
                   TextSpan(
                     text: 'Sudah punya akun? ',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 15),
                     children: [
                       TextSpan(
                         text: 'Masuk',
                         style: TextStyle(
-                          color: Colors.blue,
+                          color: Colors.blue.shade700,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildField(
-    String label,
-    String hint,
-    TextEditingController controller, {
-    TextInputType? keyboardType,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              hintText: hint,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPasswordField(
-    String label,
-    TextEditingController controller,
-    bool isVisible,
-    VoidCallback toggle,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            obscureText: !isVisible,
-            decoration: InputDecoration(
-              hintText: label,
-              suffixIcon: IconButton(
-                icon: Icon(isVisible ? Icons.visibility_off : Icons.visibility),
-                onPressed: toggle,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoleDropdown() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Pilih Role",
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              hintText: "Pilih role",
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            value: selectedRole,
-            items:
-                roles
-                    .map(
-                      (role) =>
-                          DropdownMenuItem(value: role, child: Text(role)),
-                    )
-                    .toList(),
-            onChanged: (value) {
-              setState(() {
-                selectedRole = value;
-                schoolNisInputController
-                    .clear();
-                if (value == 'Orang Tua') {
-                }
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrimaryButton(String text, VoidCallback onPressed) {
-    return Center(
-      child: SizedBox(
-        width: 180,
-        height: 48,
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2962FF),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: Colors.black, width: 1),
-            ),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
         ),
       ),
     );

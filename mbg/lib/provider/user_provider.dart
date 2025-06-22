@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart'; // Tambahkan ini untuk debugPrint
+import 'package:flutter/foundation.dart';
 
 class UserProvider with ChangeNotifier {
   String? _uid;
@@ -14,7 +14,7 @@ class UserProvider with ChangeNotifier {
   String? _profilePictureUrl;
   bool? _isApproved;
   List<String>? _childIds;
-  
+
   bool _isLoading = true;
   bool _isInitialized = false;
 
@@ -56,9 +56,6 @@ class UserProvider with ChangeNotifier {
     }
 
     if (_uid != null && _role.isEmpty) {
-        // Jika UID ada tapi role masih kosong (artinya data user belum sepenuhnya dimuat dari Firestore)
-        // Kita bisa beri waktu lagi atau logic untuk menunggu _listenToUserDocument selesai
-        // Untuk saat ini, kita biarkan _listenToUserDocument yang mengupdate _isLoading dan _isInitialized
     } else {
         _isLoading = false;
         _isInitialized = true;
@@ -89,9 +86,7 @@ class UserProvider with ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }, onError: (error) {
-      // Ganti print() dengan debugPrint() untuk debugging
-      // Atau gunakan package logging yang lebih canggih seperti `logger`
-      debugPrint("Error listening to user document: $error"); // <-- Perubahan di sini
+      debugPrint("Error listening to user document: $error");
       _isLoading = false;
       _isInitialized = true;
       notifyListeners();
@@ -105,7 +100,6 @@ class UserProvider with ChangeNotifier {
     super.dispose();
   }
 
-  // Getters (tidak ada perubahan)
   String? get uid => _uid;
   String? get email => _email;
   String get role => _role;
@@ -116,11 +110,20 @@ class UserProvider with ChangeNotifier {
   bool? get isApproved => _isApproved;
   List<String>? get childIds => _childIds;
 
-  // Setters (tidak ada perubahan dalam implementasi yang relevan dengan error ini)
-  void setUser(String? uid, String? email, String role, {String? fullName, String? schoolId, String? schoolName, String? profilePictureUrl, bool? isApproved, List<String>? childIds}) {
+  void setUser({
+    String? uid,
+    String? email,
+    String? role,
+    String? fullName,
+    String? schoolId,
+    String? schoolName,
+    String? profilePictureUrl,
+    bool? isApproved,
+    List<String>? childIds,
+  }) {
     _uid = uid;
     _email = email;
-    _role = role;
+    _role = role ?? _role;
     _fullName = fullName;
     _schoolId = schoolId;
     _schoolName = schoolName;
