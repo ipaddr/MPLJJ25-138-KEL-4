@@ -18,8 +18,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final fullNameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  // Mengganti schoolNisInputController menjadi generic untuk input spesifik role
-  final TextEditingController roleSpecificInputController = TextEditingController();
+  final TextEditingController schoolNisInputController =
+      TextEditingController();
 
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
@@ -38,7 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     fullNameController.dispose();
     emailController.dispose();
     phoneController.dispose();
-    roleSpecificInputController.dispose(); // Perubahan
+    schoolNisInputController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
@@ -265,39 +265,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onChanged: (value) {
                   setState(() {
                     selectedRole = value;
-                    roleSpecificInputController.clear(); // Perubahan: clear controller
+                    schoolNisInputController.clear();
                   });
                 },
               ),
               const SizedBox(height: 16),
-              // Conditional input field based on selected role
-              if (selectedRole == 'Admin Sekolah')
+              if (selectedRole == 'Admin Sekolah' ||
+                  selectedRole == 'Guru' ||
+                  selectedRole == 'Tim Katering')
                 _buildCustomTextField(
                   label: "Nama Sekolah",
-                  hint: "Isi nama sekolah Anda",
-                  controller: roleSpecificInputController,
+                  hint: "Isi nama sekolah",
+                  controller: schoolNisInputController,
                   prefixIcon: Icons.home_outlined,
-                )
-              else if (selectedRole == 'Guru' || selectedRole == 'Tim Katering') // Perubahan: Tambah 'Tim Katering'
-                _buildCustomTextField(
-                  label: "Kode Sekolah", // Perubahan: label menjadi Kode Sekolah
-                  hint: "Masukkan kode sekolah Anda", // Perubahan: hint
-                  controller: roleSpecificInputController,
-                  prefixIcon: Icons.vpn_key_outlined, // Icon baru untuk kode
                 )
               else if (selectedRole == 'Orang Tua')
                 _buildCustomTextField(
                   label: "NIS Anak",
-                  hint: "Masukkan NIS anak Anda",
-                  controller: roleSpecificInputController,
+                  hint: "Masukkan NIS anak",
+                  controller: schoolNisInputController,
                   keyboardType: TextInputType.number,
                   prefixIcon: Icons.child_care_outlined,
                 )
               else if (selectedRole == 'Dinas Pendidikan')
                 _buildCustomTextField(
                   label: "Nama Dinas",
-                  hint: "Isi nama dinas Anda",
-                  controller: roleSpecificInputController,
+                  hint: "Isi nama dinas",
+                  controller: schoolNisInputController,
                   prefixIcon: Icons.account_balance_outlined,
                 ),
               const SizedBox(height: 24),
@@ -313,29 +307,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   );
                   return;
                 }
-
-                // Perubahan: Validasi input berdasarkan role
-                String fieldLabel = '';
-                if (selectedRole == 'Admin Sekolah') {
-                  fieldLabel = 'Nama Sekolah';
-                } else if (selectedRole == 'Guru' || selectedRole == 'Tim Katering') { // Perubahan
-                  fieldLabel = 'Kode Sekolah';
-                } else if (selectedRole == 'Orang Tua') {
-                  fieldLabel = 'NIS Anak';
-                } else if (selectedRole == 'Dinas Pendidikan') {
-                  fieldLabel = 'Nama Dinas';
+                if ((selectedRole == 'Admin Sekolah' ||
+                        selectedRole == 'Guru' ||
+                        selectedRole == 'Tim Katering' ||
+                        selectedRole == 'Orang Tua' ||
+                        selectedRole == 'Dinas Pendidikan') &&
+                    schoolNisInputController.text.isEmpty) {
+                  String fieldLabel = '';
+                  if (selectedRole == 'Admin Sekolah' ||
+                      selectedRole == 'Guru' ||
+                      selectedRole == 'Tim Katering') {
+                    fieldLabel = 'Nama Sekolah';
+                  } else if (selectedRole == 'Orang Tua') {
+                    fieldLabel = 'NIS Anak';
+                  } else if (selectedRole == 'Dinas Pendidikan') {
+                    fieldLabel = 'Nama Dinas';
+                  }
+                  ScaffoldMessenger.of(currentContext).showSnackBar(
+                    SnackBar(
+                      content: Text("Harap isi $fieldLabel."),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
                 }
-
-                if (roleSpecificInputController.text.isEmpty && selectedRole != 'Dinas Pendidikan') { // Dinas Pendidikan tidak perlu Kode Sekolah atau NIS
-                    ScaffoldMessenger.of(currentContext).showSnackBar(
-                      SnackBar(
-                        content: Text("Harap isi $fieldLabel."),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                }
-
 
                 if (passwordController.text != confirmPasswordController.text) {
                   ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -350,245 +345,163 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 }
 
                 try {
-                  // Cek apakah email sudah terdaftar
-                  final email = emailController.text.trim();
-                  User? existingUser;
-                  try {
-                    existingUser = FirebaseAuth.instance.currentUser; // Cek jika sudah login
-                    if (existingUser != null && existingUser.email == email) {
-                      // Do nothing, user is already logged in with this email
-                    } else {
-                      // Try to fetch sign-in methods for the email
-                      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
-                      if (methods.isNotEmpty) {
-                        // Email already exists, get the user
-                        existingUser = (await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: passwordController.text.trim())).user; // Perlu login ulang
-                      }
-                    }
-                  } on FirebaseAuthException catch (e) {
-                      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-                          // Email not found or wrong password, continue with new registration
-                      } else {
-                          rethrow; // Re-throw other FirebaseAuthException
-                      }
-                  } catch (e) {
-                      rethrow; // Re-throw other exceptions
-                  }
-
-
-                  UserCredential userCredential;
-                  DocumentSnapshot? userDoc;
-                  String? userId;
-
-                  if (existingUser != null) {
-                    userId = existingUser.uid;
-                    userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-                  } else {
-                    userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                      email: email,
-                      password: passwordController.text.trim(),
-                    );
-                    userId = userCredential.user!.uid;
-                  }
+                  UserCredential userCredential = await FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                        email: emailController.text.trim(),
+                        password: passwordController.text.trim(),
+                      );
 
                   if (!currentContext.mounted) return;
 
-                  // Ambil data user yang sudah ada jika ada
-                  Map<String, dynamic> userData;
-                  List<String> existingRoles = [];
+                  Map<String, dynamic> userData = {
+                    'isApproved': selectedRole == 'Orang Tua' ? false : false,
+                    'childIds': [],
+                    'schoolId': null,
+                    'schoolName': null,
+                    'fullName': fullNameController.text.trim(),
+                    'email': emailController.text.trim(),
+                    'phoneNumber': phoneController.text.trim(),
+                    'role': selectedRole,
+                    'profilePictureUrl': '',
+                  };
 
-                  if (userDoc != null && userDoc.exists) {
-                    userData = userDoc.data() as Map<String, dynamic>;
-                    // Pastikan 'roles' adalah List<String>
-                    if (userData.containsKey('roles') && userData['roles'] is List) {
-                      existingRoles = List<String>.from(userData['roles']);
-                    } else {
-                      // Jika hanya ada 'role' tunggal dari versi lama, konversi ke list
-                      if (userData.containsKey('role') && userData['role'] is String) {
-                        existingRoles.add(userData['role']);
-                      }
-                    }
-                    // Tambahkan role baru jika belum ada
-                    if (!existingRoles.contains(selectedRole)) {
-                      existingRoles.add(selectedRole!);
-                    }
-                  } else {
-                    // Akun baru, inisialisasi dengan role pertama
-                    userData = {
-                      'fullName': fullNameController.text.trim(),
-                      'email': email,
-                      'phoneNumber': phoneController.text.trim(),
-                      'roles': [selectedRole!], // Menggunakan 'roles' (plural)
-                      'profilePictureUrl': '',
-                      'schoolId': null,
-                      'schoolName': null,
-                      'childIds': [],
-                      'isApproved': selectedRole == 'Admin Sekolah' || selectedRole == 'Dinas Pendidikan' ? true : false, // Admin Sekolah & Dinas Pendidikan langsung approved
-                    };
-                    existingRoles.add(selectedRole!);
-                  }
+                  String? schoolIdToLink;
 
-                  // Logika spesifik role
                   if (selectedRole == 'Admin Sekolah') {
-                    final schoolName = roleSpecificInputController.text.trim();
-                    // Cek apakah sekolah dengan nama ini sudah ada dan diverifikasi
-                    QuerySnapshot existingSchoolSnap = await FirebaseFirestore.instance.collection('schools')
-                        .where('schoolName', isEqualTo: schoolName)
-                        .limit(1)
-                        .get();
-
-                    if (existingSchoolSnap.docs.isNotEmpty) {
-                      final schoolData = existingSchoolSnap.docs.first.data() as Map<String, dynamic>;
-                      if (schoolData['isVerified'] == true) {
-                        if (!currentContext.mounted) return;
+                    userData['schoolName'] =
+                        schoolNisInputController.text
+                            .trim();
+                    DocumentReference schoolRef = await FirebaseFirestore
+                        .instance
+                        .collection('schools')
+                        .add({
+                          'schoolName':
+                              schoolNisInputController.text
+                                  .trim(),
+                          'address': '',
+                          'adminUserId': userCredential.user!.uid,
+                          'isVerified':
+                              false,
+                          'registeredAt': Timestamp.now(),
+                        });
+                    schoolIdToLink = schoolRef.id;
+                    userData['schoolId'] =
+                        schoolIdToLink;
+                    await FirebaseFirestore.instance
+                        .collection('schoolVerificationRequests')
+                        .add({
+                          'schoolId': schoolIdToLink,
+                          'schoolName': schoolNisInputController.text.trim(),
+                          'adminUserId': userCredential.user!.uid,
+                          'adminName': fullNameController.text.trim(),
+                          'status': 'pending',
+                          'requestedAt': Timestamp.now(),
+                        });
+                  } else if (selectedRole == 'Guru') {
+                    userData['schoolName'] =
+                        schoolNisInputController.text
+                            .trim();
+                    QuerySnapshot schoolSnap =
+                        await FirebaseFirestore.instance
+                            .collection('schools')
+                            .where(
+                              'schoolName',
+                              isEqualTo: schoolNisInputController.text.trim(),
+                            )
+                            .limit(1)
+                            .get();
+                    if (schoolSnap.docs.isNotEmpty) {
+                      schoolIdToLink = schoolSnap.docs.first.id;
+                      userData['schoolId'] = schoolIdToLink;
+                    } else {
+                      userData['schoolId'] =
+                          null;
+                      if (currentContext.mounted) {
                         ScaffoldMessenger.of(currentContext).showSnackBar(
                           const SnackBar(
-                            content: Text("Nama sekolah ini sudah terdaftar dan diverifikasi. Silakan hubungi admin sekolah terkait untuk akses."),
+                            content: Text(
+                              "Nama sekolah tidak ditemukan. Guru perlu didaftarkan ke sekolah yang sudah ada.",
+                            ),
                             backgroundColor: Colors.orange,
                           ),
                         );
-                        // Jika email sudah terdaftar dan sekolah terverifikasi, jangan biarkan mendaftar lagi sebagai Admin Sekolah
-                        if (existingUser == null) { // If it's a new user trying to register as admin for an existing school
-                            await FirebaseAuth.instance.currentUser?.delete(); // Delete the newly created user
-                        }
-                        return;
-                      } else {
-                         if (!currentContext.mounted) return;
-                         ScaffoldMessenger.of(currentContext).showSnackBar(
-                          const SnackBar(
-                            content: Text("Nama sekolah ini sudah terdaftar tapi belum diverifikasi. Harap tunggu verifikasi oleh Dinas Pendidikan."),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                        // Jika sekolah belum terverifikasi, biarkan Admin Sekolah yang mendaftar awal tetap pada status pending
-                        // atau arahkan untuk login jika sudah mendaftar
-                        if (existingUser == null) { // If it's a new user trying to register as admin for an existing unverified school
-                            await FirebaseAuth.instance.currentUser?.delete();
-                        }
-                        return;
                       }
-                    }
-
-                    // Buat dokumen sekolah baru dan permintaan verifikasi
-                    DocumentReference schoolRef = await FirebaseFirestore.instance.collection('schools').add({
-                      'schoolName': schoolName,
-                      'address': '', // Tambahkan field address sesuai kebutuhan
-                      'adminUserId': userId,
-                      'isVerified': false,
-                      'schoolCode': _generateSchoolCode(), // Generate kode sekolah
-                      'registeredAt': Timestamp.now(),
-                    });
-                    userData['schoolId'] = schoolRef.id;
-                    userData['schoolName'] = schoolName;
-
-                    await FirebaseFirestore.instance.collection('schoolVerificationRequests').add({
-                      'schoolId': schoolRef.id,
-                      'schoolName': schoolName,
-                      'adminUserId': userId,
-                      'adminName': fullNameController.text.trim(),
-                      'status': 'pending',
-                      'requestedAt': Timestamp.now(),
-                    });
-                    userData['isApproved'] = false; // Admin Sekolah perlu menunggu verifikasi sekolah
-                  } else if (selectedRole == 'Guru' || selectedRole == 'Tim Katering') { // Perubahan
-                    final schoolCode = roleSpecificInputController.text.trim();
-                    QuerySnapshot schoolSnap = await FirebaseFirestore.instance
-                        .collection('schools')
-                        .where('schoolCode', isEqualTo: schoolCode)
-                        .where('isVerified', isEqualTo: true) // Hanya sekolah yang sudah terverifikasi
-                        .limit(1)
-                        .get();
-
-                    if (schoolSnap.docs.isNotEmpty) {
-                      final schoolData = schoolSnap.docs.first.data() as Map<String, dynamic>;
-                      userData['schoolId'] = schoolSnap.docs.first.id;
-                      userData['schoolName'] = schoolData['schoolName'];
-                      userData['isApproved'] = true; // Guru/Tim Katering otomatis approved jika sekolah terverifikasi
-                    } else {
-                      if (!currentContext.mounted) return;
-                      ScaffoldMessenger.of(currentContext).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Kode sekolah tidak valid atau sekolah belum diverifikasi oleh Dinas Pendidikan.",
-                          ),
-                          backgroundColor: Colors.red, // Ubah warna jadi merah karena kode tidak valid/belum verifikasi
-                        ),
-                      );
-                      // Jika email baru, hapus user yang baru dibuat jika tidak valid
-                      if (existingUser == null) {
-                         await FirebaseAuth.instance.currentUser?.delete();
-                      }
-                      return;
                     }
                   } else if (selectedRole == 'Orang Tua') {
-                    final nisAnak = roleSpecificInputController.text.trim();
                     QuerySnapshot studentSnap = await FirebaseFirestore.instance
                         .collection('students')
-                        .where('nis', isEqualTo: nisAnak)
+                        .where('nis', isEqualTo: schoolNisInputController.text.trim())
                         .limit(1)
                         .get();
 
                     if (studentSnap.docs.isNotEmpty) {
-                      final studentData = studentSnap.docs.first.data() as Map<String, dynamic>;
                       userData['childIds'] = [studentSnap.docs.first.id];
-                      userData['schoolId'] = studentData['schoolId'];
-                      userData['schoolName'] = studentData['schoolName'];
-                      userData['isApproved'] = false; // Orang Tua perlu persetujuan Admin Sekolah
+                      userData['schoolId'] = studentSnap.docs.first['schoolId'];
+                      userData['schoolName'] = studentSnap.docs.first['schoolName'];
+                      userData['isApproved'] = false;
                       await FirebaseFirestore.instance.collection('parentApprovalRequests').add({
-                        'parentId': userId,
+                        'parentId': userCredential.user!.uid,
                         'parentName': fullNameController.text.trim(),
                         'childId': studentSnap.docs.first.id,
-                        'childNis': nisAnak,
-                        'schoolId': studentData['schoolId'],
-                        'schoolName': studentData['schoolName'],
+                        'childNis': schoolNisInputController.text.trim(),
+                        'schoolId': studentSnap.docs.first['schoolId'],
+                        'schoolName': studentSnap.docs.first['schoolName'],
                         'status': 'pending',
                         'requestedAt': Timestamp.now(),
                       });
                     } else {
-                      if (!currentContext.mounted) return;
-                      ScaffoldMessenger.of(currentContext).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "NIS anak tidak ditemukan. Harap pastikan NIS benar atau hubungi Admin Sekolah.",
+                      if (currentContext.mounted) {
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "NIS anak tidak ditemukan di database manapun. Harap pastikan NIS benar atau hubungi Admin Sekolah.",
+                            ),
+                            backgroundColor: Colors.orange,
                           ),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                      // Jika email baru, hapus user yang baru dibuat jika NIS tidak valid
-                      if (existingUser == null) {
-                          await FirebaseAuth.instance.currentUser?.delete();
+                        );
                       }
-                      return;
+                      userData['childIds'] = [];
+                      userData['isApproved'] = false;
                     }
                   } else if (selectedRole == 'Dinas Pendidikan') {
-                    userData['dinasName'] = roleSpecificInputController.text.trim();
-                    userData['isApproved'] = true; // Dinas Pendidikan langsung approved
-                    // Tambahkan validasi unik untuk Dinas Pendidikan jika hanya boleh 1 akun
-                    QuerySnapshot dinasSnap = await FirebaseFirestore.instance
-                        .collection('users')
-                        .where('roles', arrayContains: 'Dinas Pendidikan') // Cek jika ada role Dinas Pendidikan
-                        .limit(1)
-                        .get();
-                    if (dinasSnap.docs.isNotEmpty && dinasSnap.docs.first.id != userId) {
-                      if (!currentContext.mounted) return;
-                      ScaffoldMessenger.of(currentContext).showSnackBar(
-                        const SnackBar(
-                          content: Text("Akun Dinas Pendidikan sudah terdaftar. Hanya boleh satu."),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      if (existingUser == null) {
-                        await FirebaseAuth.instance.currentUser?.delete();
+                    userData['dinasName'] =
+                        schoolNisInputController.text.trim();
+                  } else if (selectedRole == 'Tim Katering') {
+                     userData['schoolName'] =
+                        schoolNisInputController.text
+                            .trim();
+                    QuerySnapshot schoolSnap =
+                        await FirebaseFirestore.instance
+                            .collection('schools')
+                            .where(
+                              'schoolName',
+                              isEqualTo: schoolNisInputController.text.trim(),
+                            )
+                            .limit(1)
+                            .get();
+                    if (schoolSnap.docs.isNotEmpty) {
+                      schoolIdToLink = schoolSnap.docs.first.id;
+                      userData['schoolId'] = schoolIdToLink;
+                    } else {
+                      userData['schoolId'] =
+                          null;
+                      if (currentContext.mounted) {
+                        ScaffoldMessenger.of(currentContext).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Nama sekolah tidak ditemukan. Tim Katering perlu didaftarkan ke sekolah yang sudah ada.",
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
                       }
-                      return;
                     }
                   }
 
-                  // Final update ke Firestore
                   await FirebaseFirestore.instance
                       .collection('users')
-                      .doc(userId)
-                      .set(userData, SetOptions(merge: true)); // Menggunakan merge untuk update roles
+                      .doc(userCredential.user!.uid)
+                      .set(userData);
 
                   if (!currentContext.mounted) return;
 
@@ -609,7 +522,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   if (e.code == 'weak-password') {
                     message = 'Password terlalu lemah.';
                   } else if (e.code == 'email-already-in-use') {
-                    message = 'Email sudah terdaftar. Jika Anda ingin menambahkan peran, silakan login dan tambahkan peran dari pengaturan.'; // Perubahan pesan
+                    message = 'Email sudah terdaftar.';
                   } else {
                     message = 'Terjadi kesalahan saat registrasi: ${e.message}';
                   }
@@ -662,16 +575,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
     );
-  }
-
-  // Fungsi untuk menggenerasi kode sekolah
-  String _generateSchoolCode() {
-    // Implementasi sederhana, bisa diganti dengan UUID atau kombinasi lain yang lebih robust
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    String code = '';
-    for (int i = 0; i < 6; i++) { // Misal 6 karakter
-      code += chars[DateTime.now().microsecondsSinceEpoch % chars.length];
-    }
-    return code;
   }
 }

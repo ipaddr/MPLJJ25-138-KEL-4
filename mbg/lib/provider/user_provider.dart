@@ -1,7 +1,3 @@
-// user_provider.dart (Tidak ada perubahan yang signifikan diperlukan dari diskusi sebelumnya,
-// namun pastikan 'roles' dari Firestore dibaca dengan benar,
-// dan 'role' tunggal di provider merepresentasikan role aktif saat ini)
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,8 +7,7 @@ import 'package:flutter/foundation.dart';
 class UserProvider with ChangeNotifier {
   String? _uid;
   String? _email;
-  String _role = ''; // Ini akan menyimpan role aktif yang dipilih saat login/beralih
-  List<String> _allRoles = []; // Tambahan untuk menyimpan semua role yang dimiliki pengguna
+  String _role = '';
   String? _fullName;
   String? _schoolId;
   String? _schoolName;
@@ -61,8 +56,6 @@ class UserProvider with ChangeNotifier {
     }
 
     if (_uid != null && _role.isEmpty) {
-      // Logic if user is logged in but role hasn't been set yet (e.g., app restart)
-      // _listenToUserDocument should handle this.
     } else {
         _isLoading = false;
         _isInitialized = true;
@@ -79,22 +72,7 @@ class UserProvider with ChangeNotifier {
       if (snapshot.exists) {
         _uid = uid;
         _email = snapshot.get('email') ?? _email;
-        // Baca semua peran yang dimiliki pengguna
-        if (snapshot.data()!.containsKey('roles') && snapshot.get('roles') is List) {
-          _allRoles = List<String>.from(snapshot.get('roles'));
-        } else if (snapshot.data()!.containsKey('role') && snapshot.get('role') is String) {
-          // Kompatibilitas mundur jika masih ada field 'role' tunggal
-          _allRoles = [snapshot.get('role')];
-        } else {
-          _allRoles = [];
-        }
-
-        // Jika _role saat ini kosong (misal setelah login), set ke role pertama yang ditemukan
-        // Ini bisa diubah menjadi pemilihan role di UI setelah login
-        if (_role.isEmpty && _allRoles.isNotEmpty) {
-          _role = _allRoles.first;
-        }
-
+        _role = snapshot.get('role') ?? '';
         _fullName = snapshot.get('fullName');
         _schoolId = snapshot.get('schoolId');
         _schoolName = snapshot.get('schoolName');
@@ -103,7 +81,6 @@ class UserProvider with ChangeNotifier {
         _childIds = List<String>.from(snapshot.get('childIds') ?? []);
       } else {
         _role = '';
-        _allRoles = [];
       }
       _isLoading = false;
       _isInitialized = true;
@@ -125,8 +102,7 @@ class UserProvider with ChangeNotifier {
 
   String? get uid => _uid;
   String? get email => _email;
-  String get role => _role; // Role aktif saat ini
-  List<String> get allRoles => _allRoles; // Semua role yang dimiliki pengguna
+  String get role => _role;
   String? get fullName => _fullName;
   String? get schoolId => _schoolId;
   String? get schoolName => _schoolName;
@@ -137,8 +113,7 @@ class UserProvider with ChangeNotifier {
   void setUser({
     String? uid,
     String? email,
-    String? role, // Ini adalah role aktif yang dipilih
-    List<String>? allRoles, // Tambahan: Semua peran yang dimiliki
+    String? role,
     String? fullName,
     String? schoolId,
     String? schoolName,
@@ -149,7 +124,6 @@ class UserProvider with ChangeNotifier {
     _uid = uid;
     _email = email;
     _role = role ?? _role;
-    _allRoles = allRoles ?? _allRoles; // Set semua peran
     _fullName = fullName;
     _schoolId = schoolId;
     _schoolName = schoolName;
@@ -161,21 +135,10 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Fungsi baru untuk beralih peran
-  void switchRole(String newRole) {
-    if (_allRoles.contains(newRole)) {
-      _role = newRole;
-      notifyListeners();
-    } else {
-      debugPrint("Role '$newRole' not found for this user.");
-    }
-  }
-
   void clearUser() {
     _uid = null;
     _email = null;
     _role = '';
-    _allRoles = [];
     _fullName = null;
     _schoolId = null;
     _schoolName = null;
