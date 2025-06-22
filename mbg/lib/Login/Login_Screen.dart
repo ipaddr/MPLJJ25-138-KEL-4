@@ -49,55 +49,75 @@ class _LoginScreenState extends State<LoginScreen> {
     final currentContext = context;
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+          );
 
       if (!currentContext.mounted) return;
 
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).get();
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
 
       if (!currentContext.mounted) return;
 
       if (userDoc.exists) {
         final userDataMap = userDoc.data() as Map<String, dynamic>?;
 
-        String? storedRole = userDataMap?['role'];
+        List<String> storedRoles = [];
+        if (userDataMap != null &&
+            userDataMap.containsKey('roles') &&
+            userDataMap['roles'] is List) {
+          storedRoles = List<String>.from(userDataMap['roles']);
+        } else if (userDataMap != null &&
+            userDataMap.containsKey('role') &&
+            userDataMap['role'] is String) {
+          storedRoles.add(userDataMap['role']); // Konversi role lama ke list
+        }
+
         String? fullName = userDataMap?['fullName'];
         String? schoolId = userDataMap?['schoolId'];
         String? schoolName = userDataMap?['schoolName'];
         String? profilePictureUrl = userDataMap?['profilePictureUrl'];
         bool? isApproved = userDataMap?['isApproved'] ?? false;
-        List<String> childIds = List<String>.from(userDataMap?['childIds'] ?? []);
+        List<String> childIds = List<String>.from(
+          userDataMap?['childIds'] ?? [],
+        );
 
-        if (storedRole == selectedRole) {
-          Provider.of<UserProvider>(currentContext, listen: false)
-              .setUser(
-                uid: userCredential.user!.uid,
-                email: userCredential.user!.email,
-                role: storedRole!,
-                fullName: fullName,
-                schoolId: schoolId,
-                schoolName: schoolName,
-                profilePictureUrl: profilePictureUrl,
-                isApproved: isApproved,
-                childIds: childIds,
-              );
+        if (storedRoles.contains(selectedRole)) {
+          // Cek apakah role yang dipilih ada dalam daftar roles
+          // Set user provider dengan role yang dipilih saat ini
+          Provider.of<UserProvider>(currentContext, listen: false).setUser(
+            uid: userCredential.user!.uid,
+            email: userCredential.user!.email,
+            role:
+                selectedRole!, // Menggunakan selectedRole yang dipilih pengguna
+            fullName: fullName,
+            schoolId: schoolId,
+            schoolName: schoolName,
+            profilePictureUrl: profilePictureUrl,
+            isApproved:
+                isApproved, // Perlu dipertimbangkan lebih lanjut jika approval spesifik role
+            childIds: childIds,
+          );
 
           if (!currentContext.mounted) return;
           Navigator.pushReplacement(
             currentContext,
-            MaterialPageRoute(
-              builder: (context) => const MainScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const MainScreen()),
           );
         } else {
           await FirebaseAuth.instance.signOut();
           if (!currentContext.mounted) return;
           ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(
-              content: Text('Role yang Anda pilih tidak cocok dengan akun ini.'),
+              content: Text(
+                'Anda tidak memiliki peran ini. Silakan pilih peran yang sesuai.',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -107,7 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!currentContext.mounted) return;
         ScaffoldMessenger.of(currentContext).showSnackBar(
           const SnackBar(
-            content: Text('Data pengguna tidak ditemukan. Silakan hubungi admin.'),
+            content: Text(
+              'Data pengguna tidak ditemukan. Silakan hubungi admin.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -130,7 +152,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!currentContext.mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(content: Text('Terjadi kesalahan tidak terduga: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Terjadi kesalahan tidak terduga: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -146,10 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Image.asset(
-                'assets/images/prabowo_gibran.png',
-                height: 180,
-              ),
+              Image.asset('assets/images/prabowo_gibran.png', height: 180),
               const SizedBox(height: 32),
 
               const Text(
@@ -165,10 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 'Masuk untuk melanjutkan ke akun Anda.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 40),
 
@@ -178,14 +197,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: InputDecoration(
                   labelText: 'Email',
                   hintText: 'emailanda@contoh.com',
-                  prefixIcon: const Icon(Icons.email_outlined, color: Colors.blue),
+                  prefixIcon: const Icon(
+                    Icons.email_outlined,
+                    color: Colors.blue,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -196,7 +221,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: InputDecoration(
                   labelText: 'Password',
                   hintText: '••••••••',
-                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.blue),
+                  prefixIcon: const Icon(
+                    Icons.lock_outline,
+                    color: Colors.blue,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureText ? Icons.visibility_off : Icons.visibility,
@@ -214,7 +242,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -222,22 +253,29 @@ class _LoginScreenState extends State<LoginScreen> {
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Pilih Role',
-                  prefixIcon: const Icon(Icons.person_outline, color: Colors.blue),
+                  prefixIcon: const Icon(
+                    Icons.person_outline,
+                    color: Colors.blue,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
                 ),
                 value: selectedRole,
-                items: roles
-                    .map((role) => DropdownMenuItem(
-                          value: role,
-                          child: Text(role),
-                        ))
-                    .toList(),
+                items:
+                    roles
+                        .map(
+                          (role) =>
+                              DropdownMenuItem(value: role, child: Text(role)),
+                        )
+                        .toList(),
                 onChanged: (value) {
                   setState(() {
                     selectedRole = value;
@@ -290,9 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const RegisterScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
                   );
                 },
                 child: Text.rich(
