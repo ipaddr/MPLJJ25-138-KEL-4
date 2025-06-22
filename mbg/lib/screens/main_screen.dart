@@ -15,7 +15,6 @@ class MainScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
-        // Tampilkan loading jika UserProvider masih dalam proses inisialisasi
         if (userProvider.isLoading || !userProvider.isInitialized) {
           return const Scaffold(
             body: Center(
@@ -24,21 +23,19 @@ class MainScreen extends StatelessWidget {
           );
         }
 
-        // Jika tidak ada user yang login (uid null), arahkan ke LoginScreen
+        final currentContext = context;
         if (userProvider.uid == null) {
-          // Menggunakan Future.microtask untuk menunda navigasi
-          // agar tidak terjadi error saat build
           Future.microtask(() {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => const LoginScreen(), // <--- Navigasi ke LoginScreen
-              ),
-            );
+            if (currentContext.mounted) {
+              Navigator.of(currentContext).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const LoginScreen(),
+                ),
+              );
+            }
           });
-          return const SizedBox.shrink(); // Tampilkan widget kosong sementara navigasi terjadi
+          return const SizedBox.shrink();
         }
-
-        // Jika ada user yang login, tentukan dashboard berdasarkan role
         Widget page;
         switch (userProvider.role) {
           case 'Admin Sekolah':
@@ -57,15 +54,16 @@ class MainScreen extends StatelessWidget {
             page = const KateringDashboard();
             break;
           default:
-            // Jika role tidak dikenal, juga arahkan ke LoginScreen atau halaman error
             Future.microtask(() {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => const LoginScreen(), // <--- Navigasi ke LoginScreen
-                ),
-              );
+              if (currentContext.mounted) {
+                Navigator.of(currentContext).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
+                );
+              }
             });
-            return const SizedBox.shrink(); // Tampilkan widget kosong sementara navigasi terjadi
+            return const SizedBox.shrink();
         }
         return Scaffold(body: page);
       },

@@ -278,7 +278,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 5,
-                  shadowColor: Colors.blue.shade200.withOpacity(0.5),
+                  // Corrected line:
+                  shadowColor: Colors.blue.shade200.withAlpha((255 * 0.5).round()),
                 ),
                 child: const Text(
                   'Masuk',

@@ -142,7 +142,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 5,
-          shadowColor: Colors.blue.shade200.withOpacity(0.5),
+          // Corrected line
+          shadowColor: Colors.blue.shade200.withAlpha((255 * 0.5).round()),
         ),
         child: Text(
           text,
@@ -467,9 +468,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     userData['dinasName'] =
                         schoolNisInputController.text.trim();
                   } else if (selectedRole == 'Tim Katering') {
-                     userData['schoolName'] =
-                        schoolNisInputController.text
-                            .trim();
+                      userData['schoolName'] =
+                          schoolNisInputController.text
+                              .trim();
                     QuerySnapshot schoolSnap =
                         await FirebaseFirestore.instance
                             .collection('schools')
