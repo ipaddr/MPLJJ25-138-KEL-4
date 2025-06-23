@@ -503,12 +503,6 @@ class _OrangTuaDashboardState extends State<OrangTuaDashboard> {
         const SizedBox(height: 8),
         _buildMealStatusTile("Makan Siang", Icons.lunch_dining, statusMakanSiang),
         const SizedBox(height: 20),
-
-        const Text("Ringkasan Akademik", style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        const Text("Nilai Akademik Terakhir: 85 (Baik)", style: TextStyle(color: Colors.black54)),
-        const Text("Penilaian Fokus: Meningkat", style: TextStyle(color: Colors.black54)),
-
         const SizedBox(height: 20),
       ],
     );

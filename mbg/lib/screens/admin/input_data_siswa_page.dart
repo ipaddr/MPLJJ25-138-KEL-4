@@ -84,10 +84,7 @@ class InputDataSiswaPage extends StatelessWidget {
                       listen: false,
                     );
                     final String? adminSchoolId = userProvider.schoolId;
-                    // --- BARU DITAMBAHKAN ---
                     final String? adminSchoolName = userProvider.schoolName;
-                    // --- AKHIR BARU DITAMBAHKAN ---
-
                     if (adminSchoolId == null) {
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
@@ -99,7 +96,6 @@ class InputDataSiswaPage extends StatelessWidget {
                       );
                       return;
                     }
-                    // --- BARU DITAMBAHKAN ---
                     if (adminSchoolName == null) {
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
@@ -111,8 +107,6 @@ class InputDataSiswaPage extends StatelessWidget {
                       );
                       return;
                     }
-                    // --- AKHIR BARU DITAMBAHKAN ---
-
                     if (namaController.text.isEmpty ||
                         kelasController.text.isEmpty ||
                         nisController.text.isEmpty) {
@@ -137,9 +131,7 @@ class InputDataSiswaPage extends StatelessWidget {
                             'keterangan': keteranganController.text.trim(),
                             'createdAt': Timestamp.now(),
                             'schoolId': adminSchoolId,
-                            // --- BARU DITAMBAHKAN ---
                             'schoolName': adminSchoolName,
-                            // --- AKHIR BARU DITAMBAHKAN ---
                           });
 
                       if (!currentContext.mounted) return;
