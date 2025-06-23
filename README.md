@@ -12,7 +12,7 @@ MBG hadir untuk menjawab tantangan dalam program makan bergizi dengan menyediaka
 
 ## 🌟 Fitur Unggulan
 
-MBG didukung oleh fitur-fitur canggih yang disesuaikan untuk setiap peran:
+MBG didukung oleh fitur-fitur yang telah disesuaikan untuk setiap peran:
 
 ### 👤 Autentikasi Multi-Peran & Manajemen Profil
 MBG menawarkan pengalaman login yang aman dan terpersonalisasi.
@@ -21,19 +21,19 @@ MBG menawarkan pengalaman login yang aman dan terpersonalisasi.
 
 ### 📊 Dashboard Interaktif untuk Setiap Peran
 
-Setiap pengguna mendapatkan dashboard yang kaya fitur, dirancang untuk memaksimalkan produktivitas dan pemantauan:
+Setiap pengguna mendapatkan dashboard yang dirancang untuk memaksimalkan produktivitas dan pemantauan:
 
 #### 🏫 Admin Sekolah - Jantung Operasional Gizi
 * **Status Sekolah**: Admin dapat melihat nama sekolah dan status verifikasi sekolah (Terverifikasi ✅, Menunggu Verifikasi ⏳, Verifikasi Ditolak ❌, atau Belum Mengajukan 📝). Admin juga dapat mengajukan permintaan verifikasi sekolah ke Dinas Pendidikan. 
 * **Statistik**: Pantau jumlah total siswa dan total porsi makanan yang diterima sekolah setiap harinya. 
 * **Manajemen Siswa Lengkap**:
-    * **Input Data Siswa**: Mudah menambahkan siswa baru dengan detail lengkap seperti nama, kelas, NIS, dan catatan khusus (misalnya, alergi). Data ini terhubung langsung dengan sekolah admin. 
+    * **Input Data Siswa**: Mudah menambahkan siswa baru dengan detail lengkap seperti nama, kelas, NIS, dan catatan khusus (misalnya, alergi). 
     * **Verifikasi Distribusi Makanan**: Catat penerimaan makanan dari katering dan pantau konsumsi makan pagi dan siang setiap siswa. Fitur pelaporan masalah juga tersedia jika ada kendala distribusi. 
 * **Laporan Konsumsi**: Akses laporan konsumsi makanan siswa untuk mengidentifikasi siswa yang mungkin melewatkan jadwal makan. 
 * **Persetujuan Akses Orang Tua**: Tinjau dan kelola permintaan akses data anak dari orang tua, memberikan persetujuan atau penolakan dengan mudah. 
 
 #### 👩‍🏫 Guru - Pemantau Dampak Akademik dan Gizi
-* **Evaluasi Nilai Akademik**: Input dan bandingkan nilai siswa (sebelum dan sesudah program MBG) untuk melihat peningkatan performa akademik. Visualisasi rata-rata peningkatan nilai membantu melacak kemajuan. 
+* **Evaluasi Nilai Akademik**: Input dan bandingkan nilai rata-rata siswa (sebelum dan sesudah program MBG) untuk melihat peningkatan performa akademik. Visualisasi rata-rata peningkatan nilai membantu melacak kemajuan. 
 * **Penilaian Pemahaman Harian**: Berikan penilaian cepat terhadap fokus, keaktifan diskusi, dan kecepatan memahami siswa setelah makan (skala 1-5), dilengkapi dengan kolom komentar observasi. Siswa yang sudah dinilai akan difilter secara otomatis. 
 * **Rekap Mingguan**: Lihat rekapitulasi evaluasi mingguan dalam bentuk grafik batang untuk memantau tren performa kelas. 
 
