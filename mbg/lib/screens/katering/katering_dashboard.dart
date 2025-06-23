@@ -412,8 +412,8 @@ class _KateringDashboardState extends State<KateringDashboard> {
                 ),
                 ElevatedButton(
                   onPressed: dailyMenu != null &&
-                          qualityChecked &&
-                          commentController.text.trim().isNotEmpty
+                      qualityChecked &&
+                      commentController.text.trim().isNotEmpty
                       ? _markReadyForDistribution
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -425,29 +425,6 @@ class _KateringDashboardState extends State<KateringDashboard> {
                   child: Text(isReady ? "Telah Siap" : "Tandai Siap"),
                 ),
               ],
-            ),
-
-            const SizedBox(height: 24),
-            Center(
-              child: SizedBox(
-                width: 150,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2962FF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: Colors.black),
-                    ),
-                  ),
-                  child: const Text(
-                    "Kembali",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
             ),
           ],
         ),
@@ -516,10 +493,10 @@ class _KateringDashboardState extends State<KateringDashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text("Karbohidrat    : ${dailyMenu?['carbohydrate'] ?? 'N/A'}"),
-              Text("Protein        : ${dailyMenu?['protein'] ?? 'N/A'}"),
-              Text("Sayur          : ${dailyMenu?['vegetable'] ?? 'N/A'}"),
-              Text("Buah           : ${dailyMenu?['fruit'] ?? 'N/A'}"),
-              Text("Susu           : ${dailyMenu?['milk'] ?? 'N/A'}"),
+              Text("Protein          : ${dailyMenu?['protein'] ?? 'N/A'}"),
+              Text("Sayur            : ${dailyMenu?['vegetable'] ?? 'N/A'}"),
+              Text("Buah             : ${dailyMenu?['fruit'] ?? 'N/A'}"),
+              Text("Susu             : ${dailyMenu?['milk'] ?? 'N/A'}"),
             ],
           ),
         ),
@@ -533,10 +510,10 @@ class _KateringDashboardState extends State<KateringDashboard> {
   }
 
   Widget _buildInputField(
-    String label,
-    TextEditingController controller, {
-    TextInputType keyboardType = TextInputType.text,
-  }) {
+      String label,
+      TextEditingController controller, {
+        TextInputType keyboardType = TextInputType.text,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
