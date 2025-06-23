@@ -84,9 +84,12 @@ class InputDataSiswaPage extends StatelessWidget {
                       listen: false,
                     );
                     final String? adminSchoolId = userProvider.schoolId;
+                    // --- BARU DITAMBAHKAN ---
+                    final String? adminSchoolName = userProvider.schoolName;
+                    // --- AKHIR BARU DITAMBAHKAN ---
 
                     if (adminSchoolId == null) {
-                      ScaffoldMessenger.of(currentContext).showSnackBar( 
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text(
                             "ID Sekolah Admin tidak ditemukan. Gagal menyimpan siswa.",
@@ -96,11 +99,24 @@ class InputDataSiswaPage extends StatelessWidget {
                       );
                       return;
                     }
+                    // --- BARU DITAMBAHKAN ---
+                    if (adminSchoolName == null) {
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Nama Sekolah Admin tidak ditemukan. Gagal menyimpan siswa.",
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    // --- AKHIR BARU DITAMBAHKAN ---
 
                     if (namaController.text.isEmpty ||
                         kelasController.text.isEmpty ||
                         nisController.text.isEmpty) {
-                      ScaffoldMessenger.of(currentContext).showSnackBar( 
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text(
                             "Harap isi semua kolom informasi umum!",
@@ -115,31 +131,34 @@ class InputDataSiswaPage extends StatelessWidget {
                       await FirebaseFirestore.instance
                           .collection('students')
                           .add({
-                            'nama': namaController.text.trim(), 
-                            'kelas': kelasController.text.trim(), 
-                            'nis': nisController.text.trim(), 
-                            'keterangan': keteranganController.text.trim(), 
-                            'createdAt': Timestamp.now(), 
+                            'nama': namaController.text.trim(),
+                            'kelas': kelasController.text.trim(),
+                            'nis': nisController.text.trim(),
+                            'keterangan': keteranganController.text.trim(),
+                            'createdAt': Timestamp.now(),
                             'schoolId': adminSchoolId,
+                            // --- BARU DITAMBAHKAN ---
+                            'schoolName': adminSchoolName,
+                            // --- AKHIR BARU DITAMBAHKAN ---
                           });
 
-                      if (!currentContext.mounted) return; 
+                      if (!currentContext.mounted) return;
 
-                      namaController.clear(); 
-                      kelasController.clear(); 
-                      nisController.clear(); 
-                      keteranganController.clear(); 
+                      namaController.clear();
+                      kelasController.clear();
+                      nisController.clear();
+                      keteranganController.clear();
 
-                      ScaffoldMessenger.of(currentContext).showSnackBar( 
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text("Data siswa berhasil disimpan!"),
                           backgroundColor: Colors.green,
                         ),
                       );
                     } catch (e) {
-                      if (!currentContext.mounted) return; 
+                      if (!currentContext.mounted) return;
 
-                      ScaffoldMessenger.of(currentContext).showSnackBar( 
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
                           content: Text("Gagal menyimpan data: $e"),
                           backgroundColor: Colors.red,
@@ -166,18 +185,18 @@ class InputDataSiswaPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)), 
-          const SizedBox(height: 6), 
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
           TextField(
-            controller: controller, 
-            maxLines: isMultiline ? 4 : 1, 
+            controller: controller,
+            maxLines: isMultiline ? 4 : 1,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 14,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10), 
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
@@ -192,11 +211,11 @@ class InputDataSiswaPage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Container(
-      width: 140, 
-      height: 48, 
+      width: 140,
+      height: 48,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.black, width: 1), 
-        color: const Color(0xFF2962FF), 
+        border: Border.all(color: Colors.black, width: 1),
+        color: const Color(0xFF2962FF),
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextButton(
