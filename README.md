@@ -71,9 +71,9 @@ MBG dibangun dengan teknologi modern untuk performa optimal dan kemudahan pengem
 * **`flutter_dotenv`**: Mengamankan kredensial sensitif dengan memuat variabel lingkungan dari file `.env`. 
 * **`google_generative_ai`**: Integrasi langsung dengan model AI canggih Gemini untuk fungsionalitas chatbot. 
 
-## 🚀 Instalasi dan Setup (Cepat dan Mudah!)
+## 🚀 Instalasi dan Setup
 
-Ikuti langkah-langkah sederhana ini untuk menjalankan MBG di lingkungan lokal Anda:
+Ikuti langkah-langkah ini untuk menjalankan MBG di lingkungan lokal Anda:
 
 1.  **Kloning Repositori:**
     ```bash
