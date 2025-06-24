@@ -1,5 +1,7 @@
 # Makan Gizi Gratis (MBG)
 
+![alt text](image.png)
+
 Selamat datang di repositori proyek **Makan Gizi Gratis (MBG)**! Ini adalah aplikasi mobile yang dibangun dengan Flutter, dirancang untuk membantu pengelolaan dan pemantauan program penyediaan makanan bergizi di sekolah. MBG menghubungkan seluruh ekosistem sekolah, mulai dari admin, guru, orang tua, dinas pendidikan, hingga tim katering dalam satu platform. 
 
 ## ✨ Mengapa MBG?

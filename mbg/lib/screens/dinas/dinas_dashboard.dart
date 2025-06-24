@@ -581,31 +581,6 @@ class _DinasDashboardState extends State<DinasDashboard> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      "Halaman Insight AI belum diimplementasikan.",
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.insights, color: Colors.white),
-              label: const Text(
-                "Lihat Insight AI",
-                style: TextStyle(color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
